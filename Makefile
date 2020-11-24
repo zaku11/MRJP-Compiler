@@ -1,4 +1,4 @@
-CC=g++
+CC=g++ -std=c++17
 CCFLAGS=-g -W -Wall
 
 FLEX=flex
@@ -17,7 +17,7 @@ clean:
 	rm -f *.o TestLatte Latte.aux Latte.log Latte.pdf Latte.dvi Latte.ps Latte
 
 distclean: clean
-	rm -f Absyn.C Absyn.H Test.C Parser.C Parser.H Lexer.C Skeleton.C Skeleton.H Printer.C Printer.H Makefile Latte.l Latte.y Latte.tex 
+	rm -f Absyn.C Absyn.H Test.C Parser.C Parser.H Lexer.C Skeleton.C Skeleton.H Printer.cpp Printer.H Makefile Latte.l Latte.y Latte.tex 
 
 TestLatte: ${OBJS} Test.o
 	@echo "Linking TestLatte..."
@@ -38,8 +38,8 @@ Lexer.o: Lexer.C Parser.H
 Parser.o: Parser.C Absyn.H
 	${CC} ${CCFLAGS} -c Parser.C
 
-Printer.o: Printer.C Printer.H Absyn.H
-	${CC} ${CCFLAGS} -c Printer.C
+Printer.o: Printer.cpp Printer.H Absyn.H
+	${CC} ${CCFLAGS} -c Printer.cpp
 
 Skeleton.o: Skeleton.C Skeleton.H Absyn.H
 	${CC} ${CCFLAGS} -Wno-unused-parameter -c Skeleton.C
