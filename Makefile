@@ -7,7 +7,7 @@ FLEX_OPTS=-PLatte
 BISON=bison
 BISON_OPTS=-t -pLatte
 
-OBJS=Absyn.o Lexer.o Parser.o Printer.o
+OBJS=Absyn.o Lexer.o Parser.o FrontEnd.o
 
 .PHONY: clean distclean
 
@@ -17,7 +17,7 @@ clean:
 	rm -f *.o TestLatte Latte.aux Latte.log Latte.pdf Latte.dvi Latte.ps Latte
 
 distclean: clean
-	rm -f Absyn.C Absyn.H Test.C Parser.C Parser.H Lexer.C Skeleton.C Skeleton.H Printer.cpp Printer.H Makefile Latte.l Latte.y Latte.tex 
+	rm -f Absyn.C Absyn.H Test.C Parser.C Parser.H Lexer.C Skeleton.C Skeleton.H FrontEnd.cpp FrontEnd.H Makefile Latte.l Latte.y Latte.tex 
 
 TestLatte: ${OBJS} Test.o
 	@echo "Linking TestLatte..."
@@ -38,11 +38,11 @@ Lexer.o: Lexer.C Parser.H
 Parser.o: Parser.C Absyn.H
 	${CC} ${CCFLAGS} -c Parser.C
 
-Printer.o: Printer.cpp Printer.H Absyn.H
-	${CC} -c Printer.cpp
+FrontEnd.o: FrontEnd.cpp FrontEnd.H Absyn.H
+	${CC} -c FrontEnd.cpp
 
 Skeleton.o: Skeleton.C Skeleton.H Absyn.H
 	${CC} ${CCFLAGS} -Wno-unused-parameter -c Skeleton.C
 
-Test.o: Test.C Parser.H Printer.H Absyn.H
+Test.o: Test.C Parser.H FrontEnd.H Absyn.H
 	${CC} ${CCFLAGS} -c Test.C

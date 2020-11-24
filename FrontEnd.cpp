@@ -4,7 +4,7 @@
 #include <iostream>
 #include <memory>
 #include <variant>
-#include "Printer.H"
+#include "FrontEnd.H"
 #define INDENT_WIDTH 2
 
 using std :: cerr;
@@ -13,13 +13,13 @@ using std :: vector;
 inline std::ostream& operator<<(std::ostream& out, const TYPE value) {
   switch(value) {
     case INT:
-      return out << " INT ";
+      return out << "INT";
     case VOID:
-      return out << " VOID ";
+      return out << "VOID";
     case BOOLEAN:
-      return out << " BOOLEAN ";
+      return out << "BOOLEAN";
     case STRING:
-      return out << " STRING ";
+      return out << "STRING";
   }
   return out;
 }
@@ -34,148 +34,52 @@ TYPE type_translator(Type* val) {
 
 void check_for_existence(Ident &ident, VarEnv *env_of_vars, int &line_number) {
   if(env_of_vars->find(ident) == env_of_vars->end()) {
-    cerr << "ERROR at " << line_number << " : " << ident << " is not defined\n";
+    cerr << "ERROR\nLine " << line_number << " : " << ident << " is not defined\n";
     exit(-1);
   }
 }
 
 void check_for_existence(Ident &ident, FunEnv *env_of_functions, int &line_number) {
   if(env_of_functions->find(ident) == env_of_functions->end()) {
-    cerr << "ERROR at " << line_number << " : " << ident << " is not defined\n";
+    cerr << "ERROR\nLine " << line_number << " : " << ident << " is not defined\n";
     exit(-1);
   }
 }
 
 void check_for_type_matching(TYPE type1, TYPE type2, int &line_number) {
   if(type1 != type2) {
-    cerr << "ERROR at " << line_number << " : trying to assign " << type2 << " to " << type1 << "\n";
+    cerr << "ERROR\nLine " << line_number << " : trying to assign " << type2 << " to " << type1 << "\n";
     exit(-1); 
   }
 }
 
 
-//You may wish to change render
-void PrintAbsyn::render(Char c)
-{
-  if (c == '{')
-  {
-     bufAppend('\n');
-     indent();
-     bufAppend(c);
-     _n_ = _n_ + INDENT_WIDTH;
-     bufAppend('\n');
-     indent();
-  }
-  else if (c == '(' || c == '[')
-     bufAppend(c);
-  else if (c == ')' || c == ']')
-  {
-     backup();
-     bufAppend(c);
-  }
-  else if (c == '}')
-  {
-     int t;
-     _n_ = _n_ - INDENT_WIDTH;
-     for (t=0; t<INDENT_WIDTH; t++) {
-       backup();
-     }
-     bufAppend(c);
-     bufAppend('\n');
-     indent();
-  }
-  else if (c == ',')
-  {
-     backup();
-     bufAppend(c);
-     bufAppend(' ');
-  }
-  else if (c == ';')
-  {
-     backup();
-     bufAppend(c);
-     bufAppend('\n');
-     indent();
-  }
-  else if (c == 0) return;
-  else
-  {
-     bufAppend(' ');
-     bufAppend(c);
-     bufAppend(' ');
-  }
-}
-
-void PrintAbsyn::render(String s_)
-{
-  const char *s = s_.c_str() ;
-  if(strlen(s) > 0)
-  {
-    bufAppend(s);
-    bufAppend(' ');
-  }
-}
-void PrintAbsyn::render(char *s)
-{
-  if(strlen(s) > 0)
-  {
-    bufAppend(s);
-    bufAppend(' ');
-  }
-}
-
-void PrintAbsyn::indent()
-{
-  int n = _n_;
-  while (n > 0)
-  {
-    bufAppend(' ');
-    n--;
-  }
-}
-
-void PrintAbsyn::backup()
-{
-  if (buf_[cur_ - 1] == ' ')
-  {
-    buf_[cur_ - 1] = 0;
-    cur_--;
-  }
-}
-
-PrintAbsyn::PrintAbsyn(void)
-{
-  _i_ = 0; _n_ = 0;
-  buf_ = 0;
-  bufReset();
-}
-
-PrintAbsyn::~PrintAbsyn(void)
+StaticAnalyzer::StaticAnalyzer(void)
 {
 }
 
-char *PrintAbsyn::print(Visitable *v)
+StaticAnalyzer::~StaticAnalyzer(void)
 {
-  bufReset();
+}
+
+void StaticAnalyzer::analyze(Visitable *v)
+{
   v->accept(this);
-  return buf_;
 }
 
-void PrintAbsyn::visitProgram(Program *p) {} //abstract class
+void StaticAnalyzer::visitProgram(Program *p) {} //abstract class
 
-void PrintAbsyn::visitProgramDef(ProgramDef *p)
+void StaticAnalyzer::visitProgramDef(ProgramDef *p)
 {
   if(p->listtopdef_) {
     p->listtopdef_->accept(this);
   }
 }
 
-void PrintAbsyn::visitTopDef(TopDef *p) {} //abstract class
+void StaticAnalyzer::visitTopDef(TopDef *p) {} //abstract class
 
-void PrintAbsyn::visitFnDef(FnDef *p)
+void StaticAnalyzer::visitFnDef(FnDef *p)
 {
-  // p->type_->accept(this);
-  // visitIdent(p->ident_);
   vector <TYPE> arg_types;
   vector <Ident> arg_names;
   if(p->listarg_) {
@@ -188,7 +92,6 @@ void PrintAbsyn::visitFnDef(FnDef *p)
     // p->listarg_->accept(this);
   }
   env_of_functions[p->ident_] = make_pair(arg_types, type_translator(p->type_));
-  // expected_return_type = type_translator(p->type_);
 
   auto tmp_env_of_vars = env_of_vars;
 
@@ -198,12 +101,11 @@ void PrintAbsyn::visitFnDef(FnDef *p)
   auto ret_before = last_return;
   last_return = VOID;
   
-  // run_with_rollback(p->block_);
   expected_return_type = type_translator(p->type_);
 
   p->block_->accept(this);
   if(last_return != type_translator(p->type_)) {
-    cerr << "ERROR at : " << p->line_number << " : function returned " << last_return << " but should return " << type_translator(p->type_) << "\n";
+    cerr << "ERROR\nLine " << p->line_number << " : function returned " << last_return << " but should return " << type_translator(p->type_) << "\n";
     exit(-1); 
   }
 
@@ -212,7 +114,7 @@ void PrintAbsyn::visitFnDef(FnDef *p)
   env_of_vars = tmp_env_of_vars;
 }
 
-void PrintAbsyn::visitListTopDef(ListTopDef *listtopdef)
+void StaticAnalyzer::visitListTopDef(ListTopDef *listtopdef)
 {
   bool was_there_main = false;
   vector <TYPE> single_int(1, INT);
@@ -237,7 +139,7 @@ void PrintAbsyn::visitListTopDef(ListTopDef *listtopdef)
       for(int j = 0 ; j < fn_def->listarg_->size(); j++) {
         if(auto arg = dynamic_cast<ArgDef*>((*(fn_def->listarg_))[j])) {
           if(type_translator(arg->type_) == VOID) {
-            cerr << "ERROR at " << fn_def->line_number << " : function can't have VOID as an argument\n";
+            cerr << "ERROR" << fn_def->line_number << " : function can't have VOID as an argument\n";
             exit(-1);
           }
           arg_types.push_back(type_translator(arg->type_));
@@ -261,16 +163,16 @@ void PrintAbsyn::visitListTopDef(ListTopDef *listtopdef)
   cerr << "OK\n";
 }
 
-void PrintAbsyn::visitArg(Arg *p) {} //abstract class
+void StaticAnalyzer::visitArg(Arg *p) {} //abstract class
 
-void PrintAbsyn::visitArgDef(ArgDef *p)
+void StaticAnalyzer::visitArgDef(ArgDef *p)
 {
   // p->type_->accept(this);
   // visitIdent(p->ident_);
 
 }
 
-void PrintAbsyn::visitListArg(ListArg *listarg)
+void StaticAnalyzer::visitListArg(ListArg *listarg)
 {
   // for (ListArg::const_iterator i = listarg->begin() ; i != listarg->end() ; ++i)
   // {
@@ -278,16 +180,16 @@ void PrintAbsyn::visitListArg(ListArg *listarg)
   // }
 }
 
-void PrintAbsyn::visitBlock(Block *p) {} //abstract class
+void StaticAnalyzer::visitBlock(Block *p) {} //abstract class
 
-void PrintAbsyn::visitBlockDef(BlockDef *p)
+void StaticAnalyzer::visitBlockDef(BlockDef *p)
 {
   if(p->liststmt_) {
     run_with_rollback(p->liststmt_);
   }
 }
 
-void PrintAbsyn::visitListStmt(ListStmt *liststmt)
+void StaticAnalyzer::visitListStmt(ListStmt *liststmt)
 {
   for (ListStmt::const_iterator i = liststmt->begin() ; i != liststmt->end() ; ++i)
   {
@@ -297,14 +199,14 @@ void PrintAbsyn::visitListStmt(ListStmt *liststmt)
   }
 }
 
-void PrintAbsyn::visitStmt(Stmt *p) {} //abstract class
+void StaticAnalyzer::visitStmt(Stmt *p) {} //abstract class
 
-void PrintAbsyn::visitEmpty(Empty *p)
+void StaticAnalyzer::visitEmpty(Empty *p)
 {
   last_evaluated_expr = VOID;
 }
 
-void PrintAbsyn::run_with_rollback(Visitable* v) {
+void StaticAnalyzer::run_with_rollback(Visitable* v) {
   auto curr_env_of_vars = env_of_vars;
   auto curr_env_of_functions = env_of_functions;
   auto curr_defined_in_current_scope = defined_in_current_scope;
@@ -325,12 +227,12 @@ void PrintAbsyn::run_with_rollback(Visitable* v) {
 }
 
 //Some rollbacks happening
-void PrintAbsyn::visitBStmt(BStmt *p)
+void StaticAnalyzer::visitBStmt(BStmt *p)
 {
   p->block_->accept(this);
 }
 
-void PrintAbsyn::visitDecl(Decl *p)
+void StaticAnalyzer::visitDecl(Decl *p)
 {
   // p->type_->accept(this);
   // p->listitem_->accept(this);
@@ -342,7 +244,7 @@ void PrintAbsyn::visitDecl(Decl *p)
       {
         if(defined_in_current_scope.find(init->ident_) != defined_in_current_scope.end()) 
         {
-          cerr << "ERROR at " << init->line_number << " : variable " << init->ident_ << " got redefined in this same scope\n";
+          cerr << "ERROR\nLine " << init->line_number << " : variable " << init->ident_ << " got redefined in this same scope\n";
           exit(-1);
         }
         defined_in_current_scope.insert(init->ident_);
@@ -352,7 +254,7 @@ void PrintAbsyn::visitDecl(Decl *p)
       {
         if(defined_in_current_scope.find(init->ident_) != defined_in_current_scope.end()) 
         {
-          cerr << "ERROR at " << init->line_number << " : variable " << init->ident_ << " got redefined in this same scope\n";
+          cerr << "ERROR\nLine " << init->line_number << " : variable " << init->ident_ << " got redefined in this same scope\n";
           exit(-1);
         }
         init->expr_->accept(this);
@@ -366,68 +268,66 @@ void PrintAbsyn::visitDecl(Decl *p)
 
 }
 
-void PrintAbsyn::visitAss(Ass *p)
+void StaticAnalyzer::visitAss(Ass *p)
 {
   check_for_existence(p->ident_, &env_of_vars, p->line_number);
   p->expr_->accept(this);
   check_for_type_matching(env_of_vars[p->ident_], last_evaluated_expr, p->line_number);
 }
 
-void PrintAbsyn::visitIncr(Incr *p)
+void StaticAnalyzer::visitIncr(Incr *p)
 {
   check_for_existence(p->ident_, &env_of_vars, p->line_number);
   check_for_type_matching(env_of_vars[p->ident_], INT, p->line_number);
 }
 
-void PrintAbsyn::visitDecr(Decr *p)
+void StaticAnalyzer::visitDecr(Decr *p)
 {
   check_for_existence(p->ident_, &env_of_vars, p->line_number);
   check_for_type_matching(env_of_vars[p->ident_], INT, p->line_number);
 }
 
-void PrintAbsyn::visitRet(Ret *p)
+void StaticAnalyzer::visitRet(Ret *p)
 {
   p->expr_->accept(this);
   // if(last_evaluated_expr == VOID) {
-  //   cerr << "ERROR at " << p->line_number << " : you can't return VOID that way\n";
+  //   cerr << "ERROR\nLine " << p->line_number << " : you can't return VOID that way\n";
   //   exit(-1);
   // }
   // if(last_return != last_evaluated_expr && last_return != VOID) {
-  //   cerr << "ERROR at : " << p->line_number << " : function has returns both of " << last_return << " and " << last_evaluated_expr << " type\n";
+  //   cerr << "ERROR\nLine : " << p->line_number << " : function has returns both of " << last_return << " and " << last_evaluated_expr << " type\n";
   //   exit(-1);
   // }
   if(expected_return_type != last_evaluated_expr) {
-    cerr << "ERROR at " << p->line_number << " : wanted to return " << last_evaluated_expr << " but expected " << expected_return_type << "\n";
+    cerr << "ERROR\nLine " << p->line_number << " : wanted to return " << last_evaluated_expr << " but expected " << expected_return_type << "\n";
     exit(-1); 
   }
   last_return = last_evaluated_expr;
 }
 
-void PrintAbsyn::visitVRet(VRet *p)
+void StaticAnalyzer::visitVRet(VRet *p)
 {
   last_return = VOID;
   if(last_return != expected_return_type) {
-    cerr << "ERROR at : " << p->line_number << " : function returns " << last_return << " but it expects " << expected_return_type << " type\n";
+    cerr << "ERROR\nLine " << p->line_number << " : function returns " << last_return << " but it expects " << expected_return_type << " type\n";
     exit(-1);
   }
 }
 
-void PrintAbsyn::visitCond(Cond *p)
+void StaticAnalyzer::visitCond(Cond *p)
 {
   p->expr_->accept(this);
 
   if(last_evaluated_expr != BOOLEAN) {
-    cerr << "ERROR at " << p->line_number << " : IF must have condition of type BOOLEAN\n";
+    cerr << "ERROR\nLine " << p->line_number << " : IF must have condition of type BOOLEAN\n";
     exit(-1);
   }
   auto cond_value = last_evaluated_expr_value;
-
   auto ret_tmp = last_return;
   p->stmt_->accept(this);
 
   if(auto val = std::get_if<bool>(&cond_value)) { {
     if((*val) == true) {
-      // cerr << "HERE!";
       // This means that we are statically sure we're entering the IF branch
       // So if there was a return and there was no return before then this is a
       // valid code 
@@ -440,15 +340,14 @@ void PrintAbsyn::visitCond(Cond *p)
     last_return = ret_tmp;
   }
   
-
 }
 
 
-void PrintAbsyn::visitCondElse(CondElse *p)
+void StaticAnalyzer::visitCondElse(CondElse *p)
 {
   p->expr_->accept(this);
   if(last_evaluated_expr != BOOLEAN) {
-    cerr << "ERROR at " << p->line_number << " : IF must have condition of type BOOLEAN\n";
+    cerr << "ERROR\nLine " << p->line_number << " : IF must have condition of type BOOLEAN\n";
     exit(-1);
   }
   auto cond_value = last_evaluated_expr_value;
@@ -474,72 +373,79 @@ void PrintAbsyn::visitCondElse(CondElse *p)
   }
 }
 
-void PrintAbsyn::visitWhile(While *p)
+void StaticAnalyzer::visitWhile(While *p)
 {
   p->expr_->accept(this);
   if(last_evaluated_expr != BOOLEAN) {
-    cerr << "ERROR at " << p->line_number << " : WHILE must have condition of type BOOLEAN\n";
+    cerr << "ERROR\nLine " << p->line_number << " : WHILE must have condition of type BOOLEAN\n";
     exit(-1);
   }
-  // run_with_rollback(p->stmt_);
+
+  auto cond_value = last_evaluated_expr_value;
+  auto ret_tmp = last_return;
   p->stmt_->accept(this);
+
+  if(auto val = std::get_if<bool>(&cond_value)) { {
+    if((*val) == true) {
+      // This means that we are statically sure we're entering the WHILE loop
+      // So if there was a return and there was no return before then this is a
+      // valid code 
+    }
+    else {
+      last_return = ret_tmp;
+    }
+  }
+  } else {
+    last_return = ret_tmp;
+  }
+
 }
 
-void PrintAbsyn::visitSExp(SExp *p)
+void StaticAnalyzer::visitSExp(SExp *p)
 {
   p->expr_->accept(this);
 }
 
-void PrintAbsyn::visitItem(Item *p) {} //abstract class
+void StaticAnalyzer::visitItem(Item *p) {} //abstract class
 
-void PrintAbsyn::visitNoInit(NoInit *p)
+void StaticAnalyzer::visitNoInit(NoInit *p)
 {  
-  // In a perfect world this will not be used
-  // visitIdent(p->ident_);
 }
 
-void PrintAbsyn::visitInit(Init *p)
-{
-  // In a perfect world this will not be used
-  // visitIdent(p->ident_);
-  // p->expr_->accept(this);
-}
-
-void PrintAbsyn::visitListItem(ListItem *listitem)
-{
-  // In a perfect world this will not be used
-  // for (ListItem::const_iterator i = listitem->begin() ; i != listitem->end() ; ++i)
-  // {
-  //   (*i)->accept(this);
-  // }
-}
-
-void PrintAbsyn::visitType(Type *p) {} //abstract class
-
-void PrintAbsyn::visitInt(Int *p)
+void StaticAnalyzer::visitInit(Init *p)
 {
 }
 
-void PrintAbsyn::visitStr(Str *p)
+void StaticAnalyzer::visitListItem(ListItem *listitem)
 {
 }
 
-void PrintAbsyn::visitBool(Bool *p)
+void StaticAnalyzer::visitType(Type *p) {} //abstract class
+
+void StaticAnalyzer::visitInt(Int *p)
 {
 }
 
-void PrintAbsyn::visitVoid(Void *p)
+void StaticAnalyzer::visitStr(Str *p)
+{
+}
+
+void StaticAnalyzer::visitBool(Bool *p)
+{
+}
+
+void StaticAnalyzer::visitVoid(Void *p)
 {
 }
 
 
-void PrintAbsyn::visitFun(Fun *p)
+void StaticAnalyzer::visitFun(Fun *p)
 {
   p->type_->accept(this);
   if(p->listtype_) {p->listtype_->accept(this);}
 }
 
-void PrintAbsyn::visitListType(ListType *listtype)
+void StaticAnalyzer::visitListType(ListType *listtype)
 {
   for (ListType::const_iterator i = listtype->begin() ; i != listtype->end() ; ++i)
   {
@@ -547,9 +453,9 @@ void PrintAbsyn::visitListType(ListType *listtype)
   }
 }
 
-void PrintAbsyn::visitExpr(Expr *p) {} //abstract class
+void StaticAnalyzer::visitExpr(Expr *p) {} //abstract class
 
-void PrintAbsyn::visitEVar(EVar *p)
+void StaticAnalyzer::visitEVar(EVar *p)
 {
   check_for_existence(p->ident_, &env_of_vars, p->line_number);
   last_evaluated_expr = env_of_vars[p->ident_];
@@ -557,31 +463,31 @@ void PrintAbsyn::visitEVar(EVar *p)
   // visitIdent(p->ident_);
 }
 
-void PrintAbsyn::visitELitInt(ELitInt *p)
+void StaticAnalyzer::visitELitInt(ELitInt *p)
 {
   last_evaluated_expr = INT;
   last_evaluated_expr_value = p->integer_;
 }
 
-void PrintAbsyn::visitELitTrue(ELitTrue *p)
+void StaticAnalyzer::visitELitTrue(ELitTrue *p)
 {
   last_evaluated_expr = BOOLEAN;
   last_evaluated_expr_value = true;
 }
 
-void PrintAbsyn::visitELitFalse(ELitFalse *p)
+void StaticAnalyzer::visitELitFalse(ELitFalse *p)
 {
   last_evaluated_expr = BOOLEAN;
   last_evaluated_expr_value = false;
 }
 
-void PrintAbsyn::visitEApp(EApp *p)
+void StaticAnalyzer::visitEApp(EApp *p)
 {
   // visitIdent(p->ident_);
   check_for_existence(p->ident_, &env_of_functions, p->line_number);
   auto expected_arg_types = env_of_functions[p->ident_].first;
   if(p->listexpr_->size() != expected_arg_types.size()) {
-    cerr << "ERROR at " << p->line_number << " : function " << p->ident_ << " was supplied " << p->listexpr_->size() << " arguments but needed " << expected_arg_types.size() << "\n";
+    cerr << "ERROR\nLine " << p->line_number << " : function " << p->ident_ << " was supplied " << p->listexpr_->size() << " arguments but needed " << expected_arg_types.size() << "\n";
     exit(-1);  
   }
   for(int i = 0; i < p->listexpr_->size(); i++) {
@@ -593,13 +499,13 @@ void PrintAbsyn::visitEApp(EApp *p)
   // if(p->listexpr_) {p->listexpr_->accept(this);}
 }
 
-void PrintAbsyn::visitEString(EString *p)
+void StaticAnalyzer::visitEString(EString *p)
 {
   last_evaluated_expr = STRING;
   last_evaluated_expr_value = p->string_;
 }
 
-void PrintAbsyn::visitNeg(Neg *p)
+void StaticAnalyzer::visitNeg(Neg *p)
 {
   p->expr_->accept(this);
   check_for_type_matching(last_evaluated_expr, INT, p->line_number);
@@ -609,7 +515,7 @@ void PrintAbsyn::visitNeg(Neg *p)
     last_evaluated_expr_value = DECOY;
 }
 
-void PrintAbsyn::visitNot(Not *p)
+void StaticAnalyzer::visitNot(Not *p)
 {
   p->expr_->accept(this);
   check_for_type_matching(last_evaluated_expr, BOOLEAN, p->line_number);
@@ -620,7 +526,7 @@ void PrintAbsyn::visitNot(Not *p)
   // last_evaluated_expr_value = !(std::get<bool>(last_evaluated_expr_value));
 }
 
-void PrintAbsyn::visitEMul(EMul *p)
+void StaticAnalyzer::visitEMul(EMul *p)
 {
   p->expr_1->accept(this);
   check_for_type_matching(last_evaluated_expr, INT, p->line_number);
@@ -636,19 +542,19 @@ void PrintAbsyn::visitEMul(EMul *p)
 
 }
 
-void PrintAbsyn::visitEAdd(EAdd *p)
+void StaticAnalyzer::visitEAdd(EAdd *p)
 {
   p->expr_1->accept(this);
   auto v1 = last_evaluated_expr_value;
   if(last_evaluated_expr != INT && last_evaluated_expr != STRING) {
-    cerr << "ERROR at " << p->line_number << " : you can only add STRINGs and INTs\n";
+    cerr << "ERROR\nLine " << p->line_number << " : you can only add STRINGs and INTs\n";
     exit(-1);
   }
   p->expr_2->accept(this);
 
   auto v2 = last_evaluated_expr_value;
   if(last_evaluated_expr != INT && last_evaluated_expr != STRING) {
-    cerr << "ERROR at " << p->line_number << " : you can only add STRINGs and INTs\n";
+    cerr << "ERROR\nLine " << p->line_number << " : you can only add STRINGs and INTs\n";
     exit(-1);
   }
 
@@ -663,7 +569,7 @@ void PrintAbsyn::visitEAdd(EAdd *p)
   
 }
 
-void PrintAbsyn::visitERel(ERel *p)
+void StaticAnalyzer::visitERel(ERel *p)
 {
   p->expr_1->accept(this);
   TYPE type1 = last_evaluated_expr;
@@ -674,13 +580,13 @@ void PrintAbsyn::visitERel(ERel *p)
   auto v2 = last_evaluated_expr_value;
 
   if(type1 != type2 || type1 == VOID || type2 == VOID) {
-    cerr << "ERROR at " << p->line_number << " : cannot compare " << type1 << " and " << type2 <<"\n";
+    cerr << "ERROR\nLine " << p->line_number << " : cannot compare " << type1 << " and " << type2 <<"\n";
     exit(-1);
   }
   last_evaluated_expr_value = DECOY;
   if(type1 == STRING || type1 == BOOLEAN) {
     if(!(dynamic_cast<EQU*>(p->relop_) || dynamic_cast<NE*>(p->relop_))) {
-      cerr << "ERROR at " << p->line_number << " : this operation is not allowed for " << type1 << "\n";
+      cerr << "ERROR\nLine " << p->line_number << " : this operation is not allowed for " << type1 << "\n";
       exit(-1);
     }
     if(type1 == STRING) {
@@ -723,7 +629,7 @@ void PrintAbsyn::visitERel(ERel *p)
   last_evaluated_expr = BOOLEAN;
 }
 
-void PrintAbsyn::visitEAnd(EAnd *p)
+void StaticAnalyzer::visitEAnd(EAnd *p)
 {
   p->expr_1->accept(this);
   check_for_type_matching(last_evaluated_expr, BOOLEAN, p->line_number);
@@ -740,7 +646,7 @@ void PrintAbsyn::visitEAnd(EAnd *p)
 
 }
 
-void PrintAbsyn::visitEOr(EOr *p)
+void StaticAnalyzer::visitEOr(EOr *p)
 {
   p->expr_1->accept(this);
   check_for_type_matching(last_evaluated_expr, BOOLEAN, p->line_number);
@@ -758,57 +664,57 @@ void PrintAbsyn::visitEOr(EOr *p)
 
 }
 
-void PrintAbsyn::visitListExpr(ListExpr *listexpr)
+void StaticAnalyzer::visitListExpr(ListExpr *listexpr)
 {
   // for (ListExpr::const_iterator i = listexpr->begin() ; i != listexpr->end() ; ++i)
   // {
   //   (*i)->accept(this);
   // }
 }
-void PrintAbsyn::visitAddOp(AddOp *p) {} //abstract class
+void StaticAnalyzer::visitAddOp(AddOp *p) {} //abstract class
 
-void PrintAbsyn::visitPlus(Plus *p) {}
+void StaticAnalyzer::visitPlus(Plus *p) {}
 
-void PrintAbsyn::visitMinus(Minus *p) {}
+void StaticAnalyzer::visitMinus(Minus *p) {}
 
-void PrintAbsyn::visitMulOp(MulOp *p) {} //abstract class
+void StaticAnalyzer::visitMulOp(MulOp *p) {} //abstract class
 
-void PrintAbsyn::visitTimes(Times *p) {}
+void StaticAnalyzer::visitTimes(Times *p) {}
 
-void PrintAbsyn::visitDiv(Div *p) {}
+void StaticAnalyzer::visitDiv(Div *p) {}
 
-void PrintAbsyn::visitMod(Mod *p) {}
+void StaticAnalyzer::visitMod(Mod *p) {}
 
-void PrintAbsyn::visitRelOp(RelOp *p) {} //abstract class
+void StaticAnalyzer::visitRelOp(RelOp *p) {} //abstract class
 
-void PrintAbsyn::visitLTH(LTH *p) {}
+void StaticAnalyzer::visitLTH(LTH *p) {}
 
-void PrintAbsyn::visitLE(LE *p) {}
+void StaticAnalyzer::visitLE(LE *p) {}
 
-void PrintAbsyn::visitGTH(GTH *p) {}
+void StaticAnalyzer::visitGTH(GTH *p) {}
 
-void PrintAbsyn::visitGE(GE *p) {}
+void StaticAnalyzer::visitGE(GE *p) {}
 
-void PrintAbsyn::visitEQU(EQU *p) {}
+void StaticAnalyzer::visitEQU(EQU *p) {}
 
-void PrintAbsyn::visitNE(NE *p) {}
+void StaticAnalyzer::visitNE(NE *p) {}
 
-void PrintAbsyn::visitInteger(Integer i)
+void StaticAnalyzer::visitInteger(Integer i)
 {
 }
 
-void PrintAbsyn::visitDouble(Double d)
+void StaticAnalyzer::visitDouble(Double d)
 {
 }
 
-void PrintAbsyn::visitChar(Char c)
+void StaticAnalyzer::visitChar(Char c)
 {
 }
 
-void PrintAbsyn::visitString(String s)
+void StaticAnalyzer::visitString(String s)
 {
 }
 
-void PrintAbsyn::visitIdent(String s)
+void StaticAnalyzer::visitIdent(String s)
 {
 }

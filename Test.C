@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "Parser.H"
-#include "Printer.H"
+#include "FrontEnd.H"
 #include "Absyn.H"
 
 void usage() {
@@ -49,8 +49,8 @@ int main(int argc, char ** argv)
   if (parse_tree)
   {
     if (!quiet) {
-      PrintAbsyn *p = new PrintAbsyn();
-      printf("%s", p->print(parse_tree));
+      StaticAnalyzer *p = new StaticAnalyzer();
+      p->analyze(parse_tree);
     }
     return 0;
   }
