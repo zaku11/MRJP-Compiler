@@ -39,7 +39,7 @@ Parser.o: Parser.C Absyn.H
 	${CC} ${CCFLAGS} -c Parser.C
 
 Printer.o: Printer.cpp Printer.H Absyn.H
-	${CC} ${CCFLAGS} -c Printer.cpp
+	${CC} -c Printer.cpp
 
 Skeleton.o: Skeleton.C Skeleton.H Absyn.H
 	${CC} ${CCFLAGS} -Wno-unused-parameter -c Skeleton.C

@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 #include <memory>
+#include <variant>
 #include "Printer.H"
 #define INDENT_WIDTH 2
 
@@ -414,13 +415,32 @@ void PrintAbsyn::visitVRet(VRet *p)
 void PrintAbsyn::visitCond(Cond *p)
 {
   p->expr_->accept(this);
+
   if(last_evaluated_expr != BOOLEAN) {
     cerr << "ERROR at " << p->line_number << " : IF must have condition of type BOOLEAN\n";
     exit(-1);
   }
+  auto cond_value = last_evaluated_expr_value;
+
   auto ret_tmp = last_return;
   p->stmt_->accept(this);
-  last_return = ret_tmp;
+
+  if(auto val = std::get_if<bool>(&cond_value)) { {
+    if((*val) == true) {
+      // cerr << "HERE!";
+      // This means that we are statically sure we're entering the IF branch
+      // So if there was a return and there was no return before then this is a
+      // valid code 
+    }
+    else {
+      last_return = ret_tmp;
+    }
+  }
+  } else {
+    last_return = ret_tmp;
+  }
+  
+
 }
 
 
@@ -431,13 +451,27 @@ void PrintAbsyn::visitCondElse(CondElse *p)
     cerr << "ERROR at " << p->line_number << " : IF must have condition of type BOOLEAN\n";
     exit(-1);
   }
+  auto cond_value = last_evaluated_expr_value;
+  auto ret_before_all_operations = last_return;
+
+
   p->stmt_1->accept(this);
   TYPE ret1 = last_return;
   last_return = VOID;
   p->stmt_2->accept(this);
   TYPE ret2 = last_return;
 
-  if(ret1 != ret2) last_return = VOID;
+  if(ret1 != ret2) {
+    last_return = ret_before_all_operations;
+  }
+  if(auto val = std::get_if<bool>(&cond_value)) {
+    if((*val) == true) {
+      last_return = ret1;
+    }
+    else {
+      last_return = ret2;
+    }
+  }
 }
 
 void PrintAbsyn::visitWhile(While *p)
@@ -519,6 +553,7 @@ void PrintAbsyn::visitEVar(EVar *p)
 {
   check_for_existence(p->ident_, &env_of_vars, p->line_number);
   last_evaluated_expr = env_of_vars[p->ident_];
+  last_evaluated_expr_value = DECOY;
   // visitIdent(p->ident_);
 }
 
@@ -554,6 +589,7 @@ void PrintAbsyn::visitEApp(EApp *p)
     check_for_type_matching(expected_arg_types[i], last_evaluated_expr, p->line_number);
   }
   last_evaluated_expr = env_of_functions[p->ident_].second;
+  last_evaluated_expr_value = DECOY;
   // if(p->listexpr_) {p->listexpr_->accept(this);}
 }
 
@@ -567,63 +603,120 @@ void PrintAbsyn::visitNeg(Neg *p)
 {
   p->expr_->accept(this);
   check_for_type_matching(last_evaluated_expr, INT, p->line_number);
-  if(auto val = std::get_if<int>(last_evaluated_expr_value))
-    last_evaluated_expr_value = -val;
-  }
-  catch(std::bad_variant_access&) {
-    last_evaluated_expr_value = void;
-  }
+  if(auto val = std::get_if<int>(&last_evaluated_expr_value))
+    last_evaluated_expr_value = -(*val);
+  else 
+    last_evaluated_expr_value = DECOY;
 }
 
 void PrintAbsyn::visitNot(Not *p)
 {
   p->expr_->accept(this);
   check_for_type_matching(last_evaluated_expr, BOOLEAN, p->line_number);
-  last_evaluated_expr_value = !(std::get<bool>(last_evaluated_expr_value));
+  if(auto val = std::get_if<bool>(&last_evaluated_expr_value))
+    last_evaluated_expr_value = !(*val);
+  else 
+    last_evaluated_expr_value = DECOY;
+  // last_evaluated_expr_value = !(std::get<bool>(last_evaluated_expr_value));
 }
 
 void PrintAbsyn::visitEMul(EMul *p)
 {
   p->expr_1->accept(this);
   check_for_type_matching(last_evaluated_expr, INT, p->line_number);
-  int i1 = std::get<int>(last_evaluated_expr_value);
+  auto i1 = (last_evaluated_expr_value);
   p->expr_2->accept(this);
   check_for_type_matching(last_evaluated_expr, INT, p->line_number);
-  int i2 = std::get<int>(last_evaluated_expr_value);
-  last_evaluated_expr_value = i1 * i2;
+  auto i2 = (last_evaluated_expr_value);
+
+  last_evaluated_expr_value = DECOY;
+  if(auto val1 = std::get_if<int>(&i1)) 
+    if(auto val2 = std::get_if<int>(&i2)) 
+      last_evaluated_expr_value = (*val1) * (*val2);
+
 }
 
 void PrintAbsyn::visitEAdd(EAdd *p)
 {
   p->expr_1->accept(this);
-  std::variant<int, string> v1 = last_evaluated_expr_value;
+  auto v1 = last_evaluated_expr_value;
   if(last_evaluated_expr != INT && last_evaluated_expr != STRING) {
     cerr << "ERROR at " << p->line_number << " : you can only add STRINGs and INTs\n";
     exit(-1);
   }
   p->expr_2->accept(this);
+
+  auto v2 = last_evaluated_expr_value;
   if(last_evaluated_expr != INT && last_evaluated_expr != STRING) {
     cerr << "ERROR at " << p->line_number << " : you can only add STRINGs and INTs\n";
     exit(-1);
   }
+
+  last_evaluated_expr_value = DECOY;
+  if(auto val1 = std::get_if<int>(&v1)) 
+    if(auto val2 = std::get_if<int>(&v2)) 
+      last_evaluated_expr_value = (*val1) + (*val2);
+
+  if(auto val1 = std::get_if<std::string>(&v1)) 
+    if(auto val2 = std::get_if<std::string>(&v2)) 
+      last_evaluated_expr_value = (*val1) + (*val2);
+  
 }
 
 void PrintAbsyn::visitERel(ERel *p)
 {
   p->expr_1->accept(this);
   TYPE type1 = last_evaluated_expr;
+  auto v1 = last_evaluated_expr_value;
   // p->relop_->accept(this);
   p->expr_2->accept(this);
   TYPE type2 = last_evaluated_expr;
-  if(type1 != type2 || type1 == VOID || type2 == VOID || type1 == STRING || type2 == STRING) {
+  auto v2 = last_evaluated_expr_value;
+
+  if(type1 != type2 || type1 == VOID || type2 == VOID) {
     cerr << "ERROR at " << p->line_number << " : cannot compare " << type1 << " and " << type2 <<"\n";
     exit(-1);
   }
-  if(type1 == BOOLEAN) {
-    if(dynamic_cast<EQU*>(p->relop_) || dynamic_cast<NE*>(p->relop_)) {}
-    else {
-      cerr << "ERROR at " << p->line_number << " : this operation is not allowed for BOOLEANS\n";
+  last_evaluated_expr_value = DECOY;
+  if(type1 == STRING || type1 == BOOLEAN) {
+    if(!(dynamic_cast<EQU*>(p->relop_) || dynamic_cast<NE*>(p->relop_))) {
+      cerr << "ERROR at " << p->line_number << " : this operation is not allowed for " << type1 << "\n";
       exit(-1);
+    }
+    if(type1 == STRING) {
+      if(auto s1 = std::get_if<std::string>(&v1)) 
+        if(auto s2 = std::get_if<std::string>(&v2)) {
+          if(dynamic_cast<EQU*>(p->relop_)) 
+            last_evaluated_expr_value = ((*s1) == (*s2));
+          if(dynamic_cast<NE*>(p->relop_)) 
+            last_evaluated_expr_value = ((*s1) != (*s2));
+        }
+    }
+    if(type1 == BOOLEAN) {
+      if(auto b1 = std::get_if<bool>(&v1)) 
+        if(auto b2 = std::get_if<bool>(&v2)) {
+          if(dynamic_cast<EQU*>(p->relop_)) 
+            last_evaluated_expr_value = ((*b1) == (*b2));
+          if(dynamic_cast<NE*>(p->relop_)) 
+            last_evaluated_expr_value = ((*b1) != (*b2));
+        }
+    }
+  }
+  if(type1 == INT) {
+    if(auto i1 = std::get_if<int>(&v1)) 
+      if(auto i2 = std::get_if<int>(&v2)) {
+        if(dynamic_cast<LTH*>(p->relop_))
+          last_evaluated_expr_value = (*i1 < *i2);    
+        if(dynamic_cast<LE*>(p->relop_))
+          last_evaluated_expr_value = (*i1 <= *i2);    
+        if(dynamic_cast<GTH*>(p->relop_))
+          last_evaluated_expr_value = (*i1 > *i2);    
+        if(dynamic_cast<GE*>(p->relop_))
+          last_evaluated_expr_value = (*i1 >= *i2);    
+        if(dynamic_cast<EQU*>(p->relop_))
+          last_evaluated_expr_value = (*i1 == *i2);
+        if(dynamic_cast<NE*>(p->relop_))
+          last_evaluated_expr_value = (*i1 != *i2);    
     }
   }
 
@@ -634,18 +727,35 @@ void PrintAbsyn::visitEAnd(EAnd *p)
 {
   p->expr_1->accept(this);
   check_for_type_matching(last_evaluated_expr, BOOLEAN, p->line_number);
+  auto v1 = last_evaluated_expr_value;
   p->expr_2->accept(this);
   check_for_type_matching(last_evaluated_expr, BOOLEAN, p->line_number);
+  auto v2 = last_evaluated_expr_value;
   last_evaluated_expr = BOOLEAN;
+
+  last_evaluated_expr_value = DECOY;
+  if(auto val1 = std::get_if<bool>(&v1)) 
+    if(auto val2 = std::get_if<bool>(&v2)) 
+      last_evaluated_expr_value = *val1 && *val2;
+
 }
 
 void PrintAbsyn::visitEOr(EOr *p)
 {
   p->expr_1->accept(this);
   check_for_type_matching(last_evaluated_expr, BOOLEAN, p->line_number);
+  auto v1 = last_evaluated_expr_value;
   p->expr_2->accept(this);
   check_for_type_matching(last_evaluated_expr, BOOLEAN, p->line_number);
+  auto v2 = last_evaluated_expr_value;
   last_evaluated_expr = BOOLEAN;
+
+
+  last_evaluated_expr_value = DECOY;
+  if(auto val1 = std::get_if<bool>(&v1)) 
+    if(auto val2 = std::get_if<bool>(&v2)) 
+      last_evaluated_expr_value = *val1 || *val2;
+
 }
 
 void PrintAbsyn::visitListExpr(ListExpr *listexpr)
@@ -685,33 +795,20 @@ void PrintAbsyn::visitNE(NE *p) {}
 
 void PrintAbsyn::visitInteger(Integer i)
 {
-  char tmp[16];
-  sprintf(tmp, "%d", i);
-  bufAppend(tmp);
 }
 
 void PrintAbsyn::visitDouble(Double d)
 {
-  char tmp[16];
-  sprintf(tmp, "%g", d);
-  bufAppend(tmp);
 }
 
 void PrintAbsyn::visitChar(Char c)
 {
-  bufAppend('\'');
-  bufAppend(c);
-  bufAppend('\'');
 }
 
 void PrintAbsyn::visitString(String s)
 {
-  bufAppend('\"');
-  bufAppend(s);
-  bufAppend('\"');
 }
 
 void PrintAbsyn::visitIdent(String s)
 {
-  render(s);
 }

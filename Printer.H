@@ -24,7 +24,6 @@ enum TYPE {
 };
 
 struct NOVALUE {
-  int trash_value;
 };
 
 // NOVALUE means here that the calculation was impossible
@@ -36,11 +35,13 @@ class PrintAbsyn : public Visitor
 {
  protected:
   int _n_, _i_;
+  const NOVALUE DECOY = NOVALUE{};
 
   TYPE last_evaluated_expr = VOID;
   VALUE last_evaluated_expr_value = 0;
   TYPE expected_return_type = VOID;
   TYPE last_return = VOID;
+
 
   std :: set <Ident> defined_in_current_scope; 
   
@@ -192,3 +193,5 @@ void render(char *s);
   char *buf_;
   int cur_, buf_size;
 };
+
+#endif
