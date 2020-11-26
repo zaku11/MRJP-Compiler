@@ -32,7 +32,7 @@ class StaticAnalyzer : public Visitor
   const NOVALUE DECOY = NOVALUE{};
 
   TYPE last_evaluated_expr = VOID;
-  VALUE last_evaluated_expr_value = 0;
+  VALUE last_evaluated_expr_value = DECOY;
   TYPE expected_return_type = VOID;
   TYPE last_return = VOID;
 

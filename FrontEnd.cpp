@@ -89,9 +89,9 @@ void StaticAnalyzer::visitFnDef(FnDef *p)
         arg_names.push_back(arg->ident_);
       }
     }
-    // p->listarg_->accept(this);
   }
-  env_of_functions[p->ident_] = make_pair(arg_types, type_translator(p->type_));
+  // This was already done in the beggining
+  // env_of_functions[p->ident_] = make_pair(arg_types, type_translator(p->type_));
 
   auto tmp_env_of_vars = env_of_vars;
 
@@ -119,32 +119,37 @@ void StaticAnalyzer::visitListTopDef(ListTopDef *listtopdef)
   bool was_there_main = false;
   vector <TYPE> single_int(1, INT);
   env_of_functions["printInt"] = make_pair(single_int, VOID);
-  vector <TYPE> single_bool(1, BOOLEAN);
-  env_of_functions["printBool"] = make_pair(single_bool, VOID);
+  // vector <TYPE> single_bool(1, BOOLEAN);
+  // env_of_functions["printBool"] = make_pair(single_bool, VOID);
   vector <TYPE> single_string(1, STRING);
   env_of_functions["printString"] = make_pair(single_string, VOID);
   vector <TYPE> empty_vec;
   env_of_functions["readInt"] = make_pair(empty_vec, INT);
   env_of_functions["readString"] = make_pair(empty_vec, STRING);
-  env_of_functions["readBool"] = make_pair(empty_vec, BOOLEAN);
+  env_of_functions["error"] = make_pair(empty_vec, VOID);
 
   //We need to gather all signatures BEFORE
   for (ListTopDef::const_iterator i = listtopdef->begin() ; i != listtopdef->end() ; ++i)
   {
     if(auto fn_def = dynamic_cast<FnDef*>(*i)) {
-      if(fn_def->ident_ == "main" && type_translator(fn_def->type_) == INT) {
+      if(fn_def->ident_ == "main" && type_translator(fn_def->type_) == INT && fn_def->listarg_->size() == 0) {
         was_there_main = true;
       }
       vector <TYPE> arg_types;
       for(int j = 0 ; j < fn_def->listarg_->size(); j++) {
         if(auto arg = dynamic_cast<ArgDef*>((*(fn_def->listarg_))[j])) {
           if(type_translator(arg->type_) == VOID) {
-            cerr << "ERROR" << fn_def->line_number << " : function can't have VOID as an argument\n";
+            cerr << "ERROR\nLine " << fn_def->line_number << " : function can't have VOID as an argument\n";
             exit(-1);
           }
           arg_types.push_back(type_translator(arg->type_));
         }
       }
+      if(env_of_functions.find(fn_def->ident_) != env_of_functions.end()) {
+        cerr << "ERROR\nLine " << fn_def->line_number << " : function with name " << fn_def->ident_ << " already exists.\n";
+        exit(-1); 
+      }
+
       env_of_functions[fn_def->ident_] = make_pair(arg_types, type_translator(fn_def->type_));
     }
   }
@@ -234,8 +239,10 @@ void StaticAnalyzer::visitBStmt(BStmt *p)
 
 void StaticAnalyzer::visitDecl(Decl *p)
 {
-  // p->type_->accept(this);
-  // p->listitem_->accept(this);
+  if(type_translator(p->type_) == VOID) {
+    cerr << "ERROR\nLine " << p->line_number << " : can't have VOID as a variable type\n";
+    exit(-1);
+  }
   if(p->listitem_) 
   {
     for (ListItem::const_iterator i = p->listitem_->begin() ; i != p->listitem_->end() ; ++i)
@@ -290,18 +297,15 @@ void StaticAnalyzer::visitDecr(Decr *p)
 void StaticAnalyzer::visitRet(Ret *p)
 {
   p->expr_->accept(this);
-  // if(last_evaluated_expr == VOID) {
-  //   cerr << "ERROR\nLine " << p->line_number << " : you can't return VOID that way\n";
-  //   exit(-1);
-  // }
-  // if(last_return != last_evaluated_expr && last_return != VOID) {
-  //   cerr << "ERROR\nLine : " << p->line_number << " : function has returns both of " << last_return << " and " << last_evaluated_expr << " type\n";
-  //   exit(-1);
-  // }
+  
   if(expected_return_type != last_evaluated_expr) {
     cerr << "ERROR\nLine " << p->line_number << " : wanted to return " << last_evaluated_expr << " but expected " << expected_return_type << "\n";
     exit(-1); 
   }
+  if(last_evaluated_expr == VOID) {
+    cerr << "ERROR\nLine " << p->line_number << " : you can't return VOID that way\n";
+    exit(-1);
+  }  
   last_return = last_evaluated_expr;
 }
 
@@ -483,7 +487,6 @@ void StaticAnalyzer::visitELitFalse(ELitFalse *p)
 
 void StaticAnalyzer::visitEApp(EApp *p)
 {
-  // visitIdent(p->ident_);
   check_for_existence(p->ident_, &env_of_functions, p->line_number);
   auto expected_arg_types = env_of_functions[p->ident_].first;
   if(p->listexpr_->size() != expected_arg_types.size()) {
@@ -496,7 +499,6 @@ void StaticAnalyzer::visitEApp(EApp *p)
   }
   last_evaluated_expr = env_of_functions[p->ident_].second;
   last_evaluated_expr_value = DECOY;
-  // if(p->listexpr_) {p->listexpr_->accept(this);}
 }
 
 void StaticAnalyzer::visitEString(EString *p)
@@ -523,17 +525,16 @@ void StaticAnalyzer::visitNot(Not *p)
     last_evaluated_expr_value = !(*val);
   else 
     last_evaluated_expr_value = DECOY;
-  // last_evaluated_expr_value = !(std::get<bool>(last_evaluated_expr_value));
 }
 
 void StaticAnalyzer::visitEMul(EMul *p)
 {
   p->expr_1->accept(this);
   check_for_type_matching(last_evaluated_expr, INT, p->line_number);
-  auto i1 = (last_evaluated_expr_value);
+  auto i1 = last_evaluated_expr_value;
   p->expr_2->accept(this);
   check_for_type_matching(last_evaluated_expr, INT, p->line_number);
-  auto i2 = (last_evaluated_expr_value);
+  auto i2 = last_evaluated_expr_value;
 
   last_evaluated_expr_value = DECOY;
   if(auto val1 = std::get_if<int>(&i1)) 
@@ -546,26 +547,36 @@ void StaticAnalyzer::visitEAdd(EAdd *p)
 {
   p->expr_1->accept(this);
   auto v1 = last_evaluated_expr_value;
-  if(last_evaluated_expr != INT && last_evaluated_expr != STRING) {
-    cerr << "ERROR\nLine " << p->line_number << " : you can only add STRINGs and INTs\n";
-    exit(-1);
-  }
-  p->expr_2->accept(this);
+  auto exp1 = last_evaluated_expr;
 
+  p->expr_2->accept(this);
   auto v2 = last_evaluated_expr_value;
-  if(last_evaluated_expr != INT && last_evaluated_expr != STRING) {
-    cerr << "ERROR\nLine " << p->line_number << " : you can only add STRINGs and INTs\n";
+  auto exp2 = last_evaluated_expr;
+
+  if(exp1 != exp2) {
+    cerr << "ERROR\nLine " << p->line_number << " : you can only add/substract expressions of the same type.\n";
     exit(-1);
   }
+
 
   last_evaluated_expr_value = DECOY;
   if(auto val1 = std::get_if<int>(&v1)) 
-    if(auto val2 = std::get_if<int>(&v2)) 
-      last_evaluated_expr_value = (*val1) + (*val2);
+    if(auto val2 = std::get_if<int>(&v2)) { 
+      if(dynamic_cast<Plus*>(p->addop_))
+        last_evaluated_expr_value = (*val1) + (*val2);
+      else 
+        last_evaluated_expr_value = (*val1) - (*val2);
+    }
 
   if(auto val1 = std::get_if<std::string>(&v1)) 
-    if(auto val2 = std::get_if<std::string>(&v2)) 
-      last_evaluated_expr_value = (*val1) + (*val2);
+    if(auto val2 = std::get_if<std::string>(&v2)) {
+      if(dynamic_cast<Plus*>(p->addop_))
+        last_evaluated_expr_value = (*val1) + (*val2);
+      else {
+        cerr << "ERROR\nLine " << p->line_number << " : you can't substract STRINGs.\n";
+        exit(-1);
+      } 
+    }
   
 }
 
