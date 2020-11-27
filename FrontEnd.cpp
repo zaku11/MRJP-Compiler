@@ -82,16 +82,13 @@ void StaticAnalyzer::visitFnDef(FnDef *p)
 {
   vector <TYPE> arg_types;
   vector <Ident> arg_names;
-  if(p->listarg_) {
-    for(int i = 0 ; i < p->listarg_->size(); i++) {
-      if(auto arg = dynamic_cast<ArgDef*>((*(p->listarg_))[i])) {
-        arg_types.push_back(type_translator(arg->type_));
-        arg_names.push_back(arg->ident_);
-      }
+  for(int i = 0 ; i < p->listarg_->size(); i++) {
+    if(auto arg = dynamic_cast<ArgDef*>((*(p->listarg_))[i])) {
+      arg_types.push_back(type_translator(arg->type_));
+      arg_names.push_back(arg->ident_);
     }
   }
-  // This was already done in the beggining
-  // env_of_functions[p->ident_] = make_pair(arg_types, type_translator(p->type_));
+  
 
   auto tmp_env_of_vars = env_of_vars;
 
@@ -119,8 +116,6 @@ void StaticAnalyzer::visitListTopDef(ListTopDef *listtopdef)
   bool was_there_main = false;
   vector <TYPE> single_int(1, INT);
   env_of_functions["printInt"] = make_pair(single_int, VOID);
-  // vector <TYPE> single_bool(1, BOOLEAN);
-  // env_of_functions["printBool"] = make_pair(single_bool, VOID);
   vector <TYPE> single_string(1, STRING);
   env_of_functions["printString"] = make_pair(single_string, VOID);
   vector <TYPE> empty_vec;
@@ -155,7 +150,7 @@ void StaticAnalyzer::visitListTopDef(ListTopDef *listtopdef)
   }
   
   if(!was_there_main) {
-    cerr << "ERROR : no function main present\n";
+    cerr << "ERROR\nNo function main present\n";
     exit(-1);
   }
 
@@ -172,17 +167,10 @@ void StaticAnalyzer::visitArg(Arg *p) {} //abstract class
 
 void StaticAnalyzer::visitArgDef(ArgDef *p)
 {
-  // p->type_->accept(this);
-  // visitIdent(p->ident_);
-
 }
 
 void StaticAnalyzer::visitListArg(ListArg *listarg)
 {
-  // for (ListArg::const_iterator i = listarg->begin() ; i != listarg->end() ; ++i)
-  // {
-  //   (*i)->accept(this);
-  // }
 }
 
 void StaticAnalyzer::visitBlock(Block *p) {} //abstract class
@@ -209,6 +197,7 @@ void StaticAnalyzer::visitStmt(Stmt *p) {} //abstract class
 void StaticAnalyzer::visitEmpty(Empty *p)
 {
   last_evaluated_expr = VOID;
+  last_evaluated_expr_value = DECOY;
 }
 
 void StaticAnalyzer::run_with_rollback(Visitable* v) {
@@ -227,11 +216,9 @@ void StaticAnalyzer::run_with_rollback(Visitable* v) {
   defined_in_current_scope = curr_defined_in_current_scope;
   last_evaluated_expr = curr_last_evaluated_expr;
   expected_return_type = curr_expected_return_type;
-  defined_in_current_scope = curr_defined_in_current_scope;
   // last_return = curr_last_return;
 }
 
-//Some rollbacks happening
 void StaticAnalyzer::visitBStmt(BStmt *p)
 {
   p->block_->accept(this);
@@ -243,24 +230,18 @@ void StaticAnalyzer::visitDecl(Decl *p)
     cerr << "ERROR\nLine " << p->line_number << " : can't have VOID as a variable type\n";
     exit(-1);
   }
-  if(p->listitem_) 
-  {
-    for (ListItem::const_iterator i = p->listitem_->begin() ; i != p->listitem_->end() ; ++i)
-    {
-      if(auto init = dynamic_cast<NoInit*>(*i)) 
-      {
-        if(defined_in_current_scope.find(init->ident_) != defined_in_current_scope.end()) 
-        {
+  if(p->listitem_) {
+    for (ListItem::const_iterator i = p->listitem_->begin() ; i != p->listitem_->end() ; ++i) {
+      if(auto init = dynamic_cast<NoInit*>(*i)) {
+        if(defined_in_current_scope.find(init->ident_) != defined_in_current_scope.end()) {
           cerr << "ERROR\nLine " << init->line_number << " : variable " << init->ident_ << " got redefined in this same scope\n";
           exit(-1);
         }
         defined_in_current_scope.insert(init->ident_);
         env_of_vars[init->ident_] = type_translator(p->type_);
       }
-      if(auto init = dynamic_cast<Init*>(*i)) 
-      {
-        if(defined_in_current_scope.find(init->ident_) != defined_in_current_scope.end()) 
-        {
+      if(auto init = dynamic_cast<Init*>(*i)) {
+        if(defined_in_current_scope.find(init->ident_) != defined_in_current_scope.end()){
           cerr << "ERROR\nLine " << init->line_number << " : variable " << init->ident_ << " got redefined in this same scope\n";
           exit(-1);
         }
@@ -445,16 +426,10 @@ void StaticAnalyzer::visitVoid(Void *p)
 
 void StaticAnalyzer::visitFun(Fun *p)
 {
-  p->type_->accept(this);
-  if(p->listtype_) {p->listtype_->accept(this);}
 }
 
 void StaticAnalyzer::visitListType(ListType *listtype)
 {
-  for (ListType::const_iterator i = listtype->begin() ; i != listtype->end() ; ++i)
-  {
-    (*i)->accept(this);
-  }
 }
 
 void StaticAnalyzer::visitExpr(Expr *p) {} //abstract class
@@ -464,7 +439,6 @@ void StaticAnalyzer::visitEVar(EVar *p)
   check_for_existence(p->ident_, &env_of_vars, p->line_number);
   last_evaluated_expr = env_of_vars[p->ident_];
   last_evaluated_expr_value = DECOY;
-  // visitIdent(p->ident_);
 }
 
 void StaticAnalyzer::visitELitInt(ELitInt *p)
@@ -585,7 +559,7 @@ void StaticAnalyzer::visitERel(ERel *p)
   p->expr_1->accept(this);
   TYPE type1 = last_evaluated_expr;
   auto v1 = last_evaluated_expr_value;
-  // p->relop_->accept(this);
+
   p->expr_2->accept(this);
   TYPE type2 = last_evaluated_expr;
   auto v2 = last_evaluated_expr_value;
@@ -600,23 +574,19 @@ void StaticAnalyzer::visitERel(ERel *p)
       cerr << "ERROR\nLine " << p->line_number << " : this operation is not allowed for " << type1 << "\n";
       exit(-1);
     }
-    if(type1 == STRING) {
-      if(auto s1 = std::get_if<std::string>(&v1)) 
-        if(auto s2 = std::get_if<std::string>(&v2)) {
-          if(dynamic_cast<EQU*>(p->relop_)) 
-            last_evaluated_expr_value = ((*s1) == (*s2));
-          if(dynamic_cast<NE*>(p->relop_)) 
-            last_evaluated_expr_value = ((*s1) != (*s2));
-        }
-    }
-    if(type1 == BOOLEAN) {
-      if(auto b1 = std::get_if<bool>(&v1)) 
-        if(auto b2 = std::get_if<bool>(&v2)) {
-          if(dynamic_cast<EQU*>(p->relop_)) 
-            last_evaluated_expr_value = ((*b1) == (*b2));
-          if(dynamic_cast<NE*>(p->relop_)) 
-            last_evaluated_expr_value = ((*b1) != (*b2));
-        }
+    if(auto s1 = std::get_if<std::string>(&v1)) 
+      if(auto s2 = std::get_if<std::string>(&v2)) {
+        if(dynamic_cast<EQU*>(p->relop_)) 
+          last_evaluated_expr_value = ((*s1) == (*s2));
+        if(dynamic_cast<NE*>(p->relop_)) 
+          last_evaluated_expr_value = ((*s1) != (*s2));
+      }
+    if(auto b1 = std::get_if<bool>(&v1)) 
+      if(auto b2 = std::get_if<bool>(&v2)) {
+        if(dynamic_cast<EQU*>(p->relop_)) 
+          last_evaluated_expr_value = ((*b1) == (*b2));
+        if(dynamic_cast<NE*>(p->relop_)) 
+          last_evaluated_expr_value = ((*b1) != (*b2));
     }
   }
   if(type1 == INT) {
@@ -677,11 +647,8 @@ void StaticAnalyzer::visitEOr(EOr *p)
 
 void StaticAnalyzer::visitListExpr(ListExpr *listexpr)
 {
-  // for (ListExpr::const_iterator i = listexpr->begin() ; i != listexpr->end() ; ++i)
-  // {
-  //   (*i)->accept(this);
-  // }
 }
+
 void StaticAnalyzer::visitAddOp(AddOp *p) {} //abstract class
 
 void StaticAnalyzer::visitPlus(Plus *p) {}
