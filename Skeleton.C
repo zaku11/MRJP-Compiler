@@ -10,6 +10,8 @@
 
 void Skeleton::visitProgram(Program *t) {} //abstract class
 void Skeleton::visitTopDef(TopDef *t) {} //abstract class
+void Skeleton::visitStructMember(StructMember *t) {} //abstract class
+void Skeleton::visitIdentExpan(IdentExpan *t) {} //abstract class
 void Skeleton::visitArg(Arg *t) {} //abstract class
 void Skeleton::visitBlock(Block *t) {} //abstract class
 void Skeleton::visitStmt(Stmt *t) {} //abstract class
@@ -36,6 +38,51 @@ void Skeleton::visitFnDef(FnDef *fn_def)
   visitIdent(fn_def->ident_);
   fn_def->listarg_->accept(this);
   fn_def->block_->accept(this);
+
+}
+
+void Skeleton::visitStructDef(StructDef *struct_def)
+{
+  /* Code For StructDef Goes Here */
+
+  visitIdent(struct_def->ident_);
+  struct_def->liststructmember_->accept(this);
+
+}
+
+void Skeleton::visitStructMemNoInit(StructMemNoInit *struct_mem_no_init)
+{
+  /* Code For StructMemNoInit Goes Here */
+
+  struct_mem_no_init->type_->accept(this);
+  visitIdent(struct_mem_no_init->ident_);
+
+}
+
+void Skeleton::visitStructMemInit(StructMemInit *struct_mem_init)
+{
+  /* Code For StructMemInit Goes Here */
+
+  struct_mem_init->type_->accept(this);
+  visitIdent(struct_mem_init->ident_);
+  struct_mem_init->expr_->accept(this);
+
+}
+
+void Skeleton::visitIdentExp(IdentExp *ident_exp)
+{
+  /* Code For IdentExp Goes Here */
+
+  ident_exp->identexpan_->accept(this);
+  visitIdent(ident_exp->ident_);
+
+}
+
+void Skeleton::visitIdentExpSimple(IdentExpSimple *ident_exp_simple)
+{
+  /* Code For IdentExpSimple Goes Here */
+
+  visitIdent(ident_exp_simple->ident_);
 
 }
 
@@ -84,8 +131,17 @@ void Skeleton::visitAss(Ass *ass)
 {
   /* Code For Ass Goes Here */
 
-  visitIdent(ass->ident_);
+  ass->identexpan_->accept(this);
   ass->expr_->accept(this);
+
+}
+
+void Skeleton::visitNewStruct(NewStruct *new_struct)
+{
+  /* Code For NewStruct Goes Here */
+
+  new_struct->identexpan_->accept(this);
+  visitIdent(new_struct->ident_);
 
 }
 
@@ -93,7 +149,7 @@ void Skeleton::visitIncr(Incr *incr)
 {
   /* Code For Incr Goes Here */
 
-  visitIdent(incr->ident_);
+  incr->identexpan_->accept(this);
 
 }
 
@@ -101,7 +157,7 @@ void Skeleton::visitDecr(Decr *decr)
 {
   /* Code For Decr Goes Here */
 
-  visitIdent(decr->ident_);
+  decr->identexpan_->accept(this);
 
 }
 
@@ -173,6 +229,15 @@ void Skeleton::visitInit(Init *init)
 
 }
 
+void Skeleton::visitInitStruct(InitStruct *init_struct)
+{
+  /* Code For InitStruct Goes Here */
+
+  visitIdent(init_struct->ident_1);
+  visitIdent(init_struct->ident_2);
+
+}
+
 void Skeleton::visitInt(Int *int_)
 {
   /* Code For Int Goes Here */
@@ -201,6 +266,14 @@ void Skeleton::visitVoid(Void *void_)
 
 }
 
+void Skeleton::visitStruct(Struct *struct_)
+{
+  /* Code For Struct Goes Here */
+
+  visitIdent(struct_->ident_);
+
+}
+
 void Skeleton::visitFun(Fun *fun)
 {
   /* Code For Fun Goes Here */
@@ -210,11 +283,19 @@ void Skeleton::visitFun(Fun *fun)
 
 }
 
+void Skeleton::visitENullCast(ENullCast *e_null_cast)
+{
+  /* Code For ENullCast Goes Here */
+
+  e_null_cast->type_->accept(this);
+
+}
+
 void Skeleton::visitEVar(EVar *e_var)
 {
   /* Code For EVar Goes Here */
 
-  visitIdent(e_var->ident_);
+  e_var->identexpan_->accept(this);
 
 }
 
@@ -398,6 +479,14 @@ void Skeleton::visitNE(NE *ne)
 
 }
 
+
+void Skeleton::visitListStructMember(ListStructMember *list_struct_member)
+{
+  for (ListStructMember::iterator i = list_struct_member->begin() ; i != list_struct_member->end() ; ++i)
+  {
+    (*i)->accept(this);
+  }
+}
 
 void Skeleton::visitListTopDef(ListTopDef *list_top_def)
 {

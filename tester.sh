@@ -4,7 +4,7 @@ TOTAL_GOOD=0
 CORRECT_GOOD=0
 TOTAL_BAD=0
 CORRECT_BAD=0
-for f in ./../lattests/good/*.lat
+for f in ./lattests/good/*.lat
 do
     echo -e "\e[0mTEST $f"
     ./TestLatte $f
@@ -19,7 +19,7 @@ do
 done
 
 echo -e "\e[0m\e[1m-------------BAD TESTS--------------------"
-for f in ./../lattests/bad/*.lat
+for f in ./lattests/bad/*.lat
 do
     echo -e "\e[0mTEST $f"
     ./TestLatte $f

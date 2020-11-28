@@ -7,6 +7,9 @@
 
 class Program;
 class TopDef;
+class StructMember;
+class ListStructMember;
+class IdentExpan;
 class ListTopDef;
 class Arg;
 class ListArg;
@@ -31,6 +34,9 @@ typedef union
   char* string_;
   Program* program_;
   TopDef* topdef_;
+  StructMember* structmember_;
+  ListStructMember* liststructmember_;
+  IdentExpan* identexpan_;
   ListTopDef* listtopdef_;
   Arg* arg_;
   ListArg* listarg_;
@@ -87,9 +93,13 @@ Program* pProgram(const char *str);
 #define _SYMB_30 289
 #define _SYMB_31 290
 #define _SYMB_32 291
-#define _STRING_ 292
-#define _INTEGER_ 293
-#define _IDENT_ 294
+#define _SYMB_33 292
+#define _SYMB_34 293
+#define _SYMB_35 294
+#define _SYMB_36 295
+#define _STRING_ 296
+#define _INTEGER_ 297
+#define _IDENT_ 298
 
 extern YYSTYPE yylval;
 
