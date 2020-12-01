@@ -122,6 +122,10 @@ void StaticAnalyzer::visitFnDef(FnDef *p)
 }
 
 void StaticAnalyzer::visitStructDef(StructDef *p) {
+  if(p->ident_ == this->INT || p->ident_ == this->VOID || p->ident_ == this->BOOLEAN || p->ident_ == this->STRING) {
+    fail("ERROR\nLine " + to_string(p->line_number) + " : you can't have " + p->ident_ + " as a struct name\n");
+  }
+
   for(int i = 0; i < p->liststructmember_->size(); i++) {
     auto member = ((*(p->liststructmember_))[i]);
     if(auto init_member = dynamic_cast<StructMemNoInit*>(member)) 

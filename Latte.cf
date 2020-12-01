@@ -40,7 +40,7 @@ Struct.    Type ::= Ident ;
 internal   Fun. Type ::= Type "(" [Type] ")" ;
 separator  Type "," ;
 -- Expressions ---------------------------------------------
-ENullCast. Expr6 ::= "<" Type ">" "null" ;
+ENullCast. Expr6 ::= "(" Type ")null" ;
 EVar.      Expr6 ::= IdentExpan ;
 ELitInt.   Expr6 ::= Integer ;
 ELitTrue.  Expr6 ::= "true" ;

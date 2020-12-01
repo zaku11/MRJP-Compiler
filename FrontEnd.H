@@ -10,18 +10,8 @@
 #include <set>
 
 
-// enum TYPE {
-//   INT = 0,
-//   VOID = 1,
-//   BOOLEAN = 2,
-//   STRING = 3,
-// };
 
 typedef std::string TYPE;
-//  "void" VOID;
-// typedef "int" INT;
-// typedef "bool" BOOLEAN;
-// typedef "string" STRING;
 
 struct NOVALUE {
 };
@@ -42,7 +32,6 @@ class StaticAnalyzer : public Visitor
   const TYPE INT = "int";
   const TYPE STRING = "string";
 
-  // TYPE last_chain_type = "";
   TYPE last_evaluated_expr = "";
   VALUE last_evaluated_expr_value = DECOY;
   TYPE expected_return_type = "";
