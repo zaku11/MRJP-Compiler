@@ -7,7 +7,7 @@ FLEX_OPTS=-PLatte
 BISON=bison
 BISON_OPTS=-t -pLatte
 
-OBJS=Absyn.o Lexer.o Parser.o FrontEnd.o
+OBJS=Absyn.o Lexer.o Parser.o FrontEnd.o Printer.o
 
 .PHONY: clean distclean
 
@@ -41,8 +41,11 @@ Parser.o: Parser.C Absyn.H
 FrontEnd.o: FrontEnd.cpp FrontEnd.H Absyn.H
 	${CC} -c FrontEnd.cpp
 
+Printer.o: Printer.C Printer.H Absyn.H
+	${CC} ${CCFLAGS} -c Printer.C
+
 Skeleton.o: Skeleton.C Skeleton.H Absyn.H
 	${CC} ${CCFLAGS} -Wno-unused-parameter -c Skeleton.C
 
-Test.o: Test.C Parser.H FrontEnd.H Absyn.H
+Test.o: Test.C Parser.H FrontEnd.H Absyn.H Printer.H
 	${CC} ${CCFLAGS} -c Test.C

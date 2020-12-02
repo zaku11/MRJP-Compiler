@@ -1,80 +1,48 @@
-#ifndef FRONTEND_HEADER
-#define FRONTEND_HEADER
+#ifndef PRINTER_HEADER
+#define PRINTER_HEADER
 
 #include "Absyn.H"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <variant>
-#include <map>
-#include <set>
 #include <exception>
 
+/* Certain applications may improve performance by changing the buffer size */
+#define BUFFER_INITIAL 2000
+/* You may wish to change _L_PAREN or _R_PAREN */
+#define _L_PAREN '('
+#define _R_PAREN ')'
 
-
-typedef std::string TYPE;
-
-struct NOVALUE {
-};
-
-class front_end_exception : public std::exception {
+class end_exception : public std::exception {
 public:
-  std :: string msg;
-  Visitable *erronous_statement;
-  front_end_exception(std::string msg, Visitable* erronous_statement) {
-    this->msg = msg;
-    this->erronous_statement = erronous_statement;
-  }
   virtual const char* what() const throw()
   {
-    return "Exception";
+    return "End Exception";
   }
 };
 
-// NOVALUE means here that the calculation was impossible
-typedef std :: variant <int, bool, std::string, NOVALUE> VALUE;
-typedef std :: map<Ident, TYPE> VarEnv;
-typedef std :: map<Ident, std :: pair<std :: vector<TYPE>, TYPE>> FunEnv;
-typedef std :: map <TYPE, std :: map<Ident, TYPE> > StructEnv;
-
-class StaticAnalyzer : public Visitor
+class PrintAbsyn : public Visitor
 {
  protected:
-  const NOVALUE DECOY = NOVALUE{};
-  const TYPE VOID = "void";
-  const TYPE BOOLEAN = "bool";
-  const TYPE INT = "int";
-  const TYPE STRING = "string";
-
-  TYPE last_evaluated_expr = "";
-  VALUE last_evaluated_expr_value = DECOY;
-  TYPE expected_return_type = "";
-  TYPE last_return = "";
-
-
-  std :: set <Ident> defined_in_current_scope; 
-  
-  StructEnv env_of_structures;
-  VarEnv env_of_vars;
-  FunEnv env_of_functions;
-  // VarEnv new_env_of_vars;
-  // FunEnv new_env_of_functions;
-  
-  void run_with_rollback(Visitable *v);
+  String error_message = "";
+  Visitable *erronous_statement;
+  int _n_, _i_;
   /* The following are simple heuristics for rendering terminals */
   /* You may wish to change them */
+  void render(Char c);
+  void render(String s);
+void render(char *s);
+  void indent(void);
+  void backup(void);
  public:
-  Visitable *incorrect_statement;
-
-  StaticAnalyzer(void);
-  ~StaticAnalyzer(void);
-  void analyze(Visitable *v);
+  PrintAbsyn(String msg, Visitable *v);
+  ~PrintAbsyn(void);
+  char *print(Visitable *v);
 
   void visitProgram(Program *p); /* abstract class */
   void visitProgramDef(ProgramDef *p);
   void visitTopDef(TopDef *p); /* abstract class */
   void visitFnDef(FnDef *p);
-
   void visitStructDef(StructDef *p);
   void visitStructMember(StructMember *p); /* abstract class */
   void visitStructMemNoInit(StructMemNoInit *p);
@@ -83,7 +51,6 @@ class StaticAnalyzer : public Visitor
   void visitIdentExpan(IdentExpan *p); /* abstract class */
   void visitIdentExp(IdentExp *p);
   void visitIdentExpSimple(IdentExpSimple *p);
-
   void visitListTopDef(ListTopDef *p);
   void visitArg(Arg *p); /* abstract class */
   void visitArgDef(ArgDef *p);
@@ -108,10 +75,10 @@ class StaticAnalyzer : public Visitor
   void visitItem(Item *p); /* abstract class */
   void visitNoInit(NoInit *p);
   void visitInit(Init *p);
+  void visitInitStruct(InitStruct *p);
   void visitListItem(ListItem *p);
   void visitType(Type *p); /* abstract class */
   void visitInt(Int *p);
-  void visitInitStruct(InitStruct *p);
   void visitStr(Str *p);
   void visitBool(Bool *p);
   void visitVoid(Void *p);
@@ -154,6 +121,65 @@ class StaticAnalyzer : public Visitor
   void visitChar(Char c);
   void visitString(String s);
   void visitIdent(String s);
+ protected:
+  void inline bufAppend(const char *s)
+  {
+    int len = strlen(s);
+    while (cur_ + len > buf_size)
+    {
+      buf_size *= 2; /* Double the buffer size */
+      resizeBuffer();
+    }
+    for(int n = 0; n < len; n++)
+    {
+      buf_[cur_ + n] = s[n];
+    }
+    cur_ += len;
+    buf_[cur_] = 0;
+  }
+
+  void inline bufAppend(const char c)
+  {
+    if (cur_ == buf_size)
+    {
+      buf_size *= 2; /* Double the buffer size */
+      resizeBuffer();
+    }
+    buf_[cur_] = c;
+    cur_++;
+    buf_[cur_] = 0;
+  }
+
+  void inline bufAppend(String str)
+  {
+    const char *s = str.c_str();
+    bufAppend(s);
+  }
+  void inline bufReset(void)
+  {
+    cur_ = 0;
+    buf_size = BUFFER_INITIAL;
+    resizeBuffer();
+    memset(buf_, 0, buf_size);
+  }
+
+  void inline resizeBuffer(void)
+  {
+    char *temp = (char *) malloc(buf_size);
+    if (!temp)
+    {
+      fprintf(stderr, "Error: Out of memory while attempting to grow buffer!\n");
+      exit(1);
+    }
+    if (buf_)
+    {
+      strcpy(temp, buf_);
+      free(buf_);
+    }
+    buf_ = temp;
+  }
+  char *buf_;
+  int cur_, buf_size;
 };
 
 #endif

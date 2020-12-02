@@ -9,6 +9,8 @@
 #include "Parser.H"
 #include "FrontEnd.H"
 #include "Absyn.H"
+#include "Printer.H"
+#include  <iostream>
 
 void usage() {
   printf("usage: Call with one of the following argument combinations:\n");
@@ -49,8 +51,20 @@ int main(int argc, char ** argv)
   if (parse_tree)
   {
     if (!quiet) {
+      
       StaticAnalyzer *p = new StaticAnalyzer();
-      p->analyze(parse_tree);
+      try {
+        p->analyze(parse_tree);
+        std::cerr << "OK\n";
+        exit(0);
+      }
+      catch(front_end_exception &e) {
+        std::cerr << "ERROR\n";
+        PrintAbsyn *p2 = new PrintAbsyn(e.msg, e.erronous_statement);
+        printf("%s", p2->print(parse_tree));
+        exit(-1);
+      }
+
     }
     return 0;
   }
