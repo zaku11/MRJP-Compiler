@@ -38,6 +38,8 @@ void render(char *s);
   PrintAbsyn(String msg, Visitable *v);
   ~PrintAbsyn(void);
   char *print(Visitable *v);
+  void revert_white_chars();
+  void try_to_end(Visitable *v, int line_number);
 
   void visitProgram(Program *p); /* abstract class */
   void visitProgramDef(ProgramDef *p);

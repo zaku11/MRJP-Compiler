@@ -10,7 +10,7 @@
 #include "FrontEnd.H"
 #include "Absyn.H"
 #include "Printer.H"
-#include  <iostream>
+#include <iostream>
 
 void usage() {
   printf("usage: Call with one of the following argument combinations:\n");

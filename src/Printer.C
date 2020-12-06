@@ -94,6 +94,14 @@ void PrintAbsyn::backup()
   }
 }
 
+void PrintAbsyn::revert_white_chars() {
+  while (cur_ > 0 && (buf_[cur_ - 1] == '\n' || buf_[cur_ - 1] == ' '))
+  {
+    buf_[cur_ - 1] = 0;
+    cur_--;
+  }
+}
+
 PrintAbsyn::PrintAbsyn(String msg, Visitable *v)
 {
   this->error_message = msg;
@@ -123,7 +131,16 @@ char *PrintAbsyn::print(Visitable *v)
         how_many_enters--;
       ptr--;
     }
+    if(ptr != 0) ptr += 2;
     return buf_ + ptr;
+  }
+}
+
+void PrintAbsyn::try_to_end(Visitable *v, int line_number) {
+  if(this->erronous_statement == v) {
+    revert_white_chars();
+    bufAppend(" <- LINE " + std::to_string(line_number) + " : " + this->error_message);
+    throw end_exception();
   }
 }
 
@@ -139,10 +156,7 @@ void PrintAbsyn::visitProgramDef(ProgramDef *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitTopDef(TopDef *p) {} //abstract class
@@ -162,10 +176,7 @@ void PrintAbsyn::visitFnDef(FnDef *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitStructDef(StructDef *p)
@@ -173,7 +184,7 @@ void PrintAbsyn::visitStructDef(StructDef *p)
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
 
-  render("class");
+  render((char*)"class");
   visitIdent(p->ident_);
   render('{');
   if(p->liststructmember_) {_i_ = 0; p->liststructmember_->accept(this);}
@@ -182,10 +193,7 @@ void PrintAbsyn::visitStructDef(StructDef *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-    if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitStructMember(StructMember *p) {} //abstract class
@@ -202,10 +210,7 @@ void PrintAbsyn::visitStructMemNoInit(StructMemNoInit *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitStructMemInit(StructMemInit *p)
@@ -222,10 +227,7 @@ void PrintAbsyn::visitStructMemInit(StructMemInit *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitListStructMember(ListStructMember *liststructmember)
@@ -233,11 +235,7 @@ void PrintAbsyn::visitListStructMember(ListStructMember *liststructmember)
   for (ListStructMember::const_iterator i = liststructmember->begin() ; i != liststructmember->end() ; ++i)
   {
     (*i)->accept(this);
-    if (i != liststructmember->end() - 1) render("");
-  }
-  if(this->erronous_statement == liststructmember) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
+    if (i != liststructmember->end() - 1) render((char*)"");
   }
 
 }
@@ -256,10 +254,7 @@ void PrintAbsyn::visitIdentExp(IdentExp *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitIdentExpSimple(IdentExpSimple *p)
@@ -272,10 +267,7 @@ void PrintAbsyn::visitIdentExpSimple(IdentExpSimple *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitListTopDef(ListTopDef *listtopdef)
@@ -283,11 +275,7 @@ void PrintAbsyn::visitListTopDef(ListTopDef *listtopdef)
   for (ListTopDef::const_iterator i = listtopdef->begin() ; i != listtopdef->end() ; ++i)
   {
     (*i)->accept(this);
-    if (i != listtopdef->end() - 1) render("");
-  }
-  if(this->erronous_statement == listtopdef) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
+    if (i != listtopdef->end() - 1) render((char*)"");
   }
 }
 
@@ -304,10 +292,7 @@ void PrintAbsyn::visitArgDef(ArgDef *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitListArg(ListArg *listarg)
@@ -316,10 +301,6 @@ void PrintAbsyn::visitListArg(ListArg *listarg)
   {
     (*i)->accept(this);
     if (i != listarg->end() - 1) render(',');
-  }
-  if(this->erronous_statement == listarg) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
   }
 }
 
@@ -337,10 +318,7 @@ void PrintAbsyn::visitBlockDef(BlockDef *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitListStmt(ListStmt *liststmt)
@@ -348,13 +326,8 @@ void PrintAbsyn::visitListStmt(ListStmt *liststmt)
   for (ListStmt::const_iterator i = liststmt->begin() ; i != liststmt->end() ; ++i)
   {
     (*i)->accept(this);
-    render("");
+    render((char*)"");
   }
-  if(this->erronous_statement == liststmt) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
-
 }
 
 void PrintAbsyn::visitStmt(Stmt *p) {} //abstract class
@@ -369,10 +342,7 @@ void PrintAbsyn::visitEmpty(Empty *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitBStmt(BStmt *p)
@@ -385,10 +355,7 @@ void PrintAbsyn::visitBStmt(BStmt *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitDecl(Decl *p)
@@ -403,10 +370,7 @@ void PrintAbsyn::visitDecl(Decl *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitAss(Ass *p)
@@ -422,10 +386,7 @@ void PrintAbsyn::visitAss(Ass *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitNewStruct(NewStruct *p)
@@ -435,17 +396,14 @@ void PrintAbsyn::visitNewStruct(NewStruct *p)
 
   _i_ = 0; p->identexpan_->accept(this);
   render('=');
-  render("new");
+  render((char*)"new");
   visitIdent(p->ident_);
   render(';');
 
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitIncr(Incr *p)
@@ -454,16 +412,13 @@ void PrintAbsyn::visitIncr(Incr *p)
   if (oldi > 0) render(_L_PAREN);
 
   _i_ = 0; p->identexpan_->accept(this);
-  render("++");
+  render((char*)"++");
   render(';');
 
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitDecr(Decr *p)
@@ -472,16 +427,13 @@ void PrintAbsyn::visitDecr(Decr *p)
   if (oldi > 0) render(_L_PAREN);
 
   _i_ = 0; p->identexpan_->accept(this);
-  render("--");
+  render((char*)"--");
   render(';');
 
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitRet(Ret *p)
@@ -489,17 +441,14 @@ void PrintAbsyn::visitRet(Ret *p)
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
 
-  render("return");
+  render((char*)"return");
   _i_ = 0; p->expr_->accept(this);
   render(';');
 
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitVRet(VRet *p)
@@ -507,16 +456,13 @@ void PrintAbsyn::visitVRet(VRet *p)
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
 
-  render("return");
+  render((char*)"return");
   render(';');
 
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitCond(Cond *p)
@@ -524,7 +470,7 @@ void PrintAbsyn::visitCond(Cond *p)
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
 
-  render("if");
+  render((char*)"if");
   render('(');
   _i_ = 0; p->expr_->accept(this);
   render(')');
@@ -533,10 +479,7 @@ void PrintAbsyn::visitCond(Cond *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitCondElse(CondElse *p)
@@ -544,21 +487,18 @@ void PrintAbsyn::visitCondElse(CondElse *p)
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
 
-  render("if");
+  render((char*)"if");
   render('(');
   _i_ = 0; p->expr_->accept(this);
   render(')');
   _i_ = 0; p->stmt_1->accept(this);
-  render("else");
+  render((char*)"else");
   _i_ = 0; p->stmt_2->accept(this);
 
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitWhile(While *p)
@@ -566,7 +506,7 @@ void PrintAbsyn::visitWhile(While *p)
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
 
-  render("while");
+  render((char*)"while");
   render('(');
   _i_ = 0; p->expr_->accept(this);
   render(')');
@@ -575,10 +515,7 @@ void PrintAbsyn::visitWhile(While *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitSExp(SExp *p)
@@ -592,10 +529,7 @@ void PrintAbsyn::visitSExp(SExp *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitItem(Item *p) {} //abstract class
@@ -610,10 +544,7 @@ void PrintAbsyn::visitNoInit(NoInit *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitInit(Init *p)
@@ -628,10 +559,7 @@ void PrintAbsyn::visitInit(Init *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitInitStruct(InitStruct *p)
@@ -641,16 +569,13 @@ void PrintAbsyn::visitInitStruct(InitStruct *p)
 
   visitIdent(p->ident_1);
   render('=');
-  render("new");
+  render((char*)"new");
   visitIdent(p->ident_2);
 
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitListItem(ListItem *listitem)
@@ -669,15 +594,12 @@ void PrintAbsyn::visitInt(Int *p)
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
 
-  render("int");
+  render((char*)"int");
 
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitStr(Str *p)
@@ -685,15 +607,12 @@ void PrintAbsyn::visitStr(Str *p)
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
 
-  render("string");
+  render((char*)"string");
 
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitBool(Bool *p)
@@ -701,15 +620,12 @@ void PrintAbsyn::visitBool(Bool *p)
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
 
-  render("boolean");
+  render((char*)"boolean");
 
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitVoid(Void *p)
@@ -717,15 +633,12 @@ void PrintAbsyn::visitVoid(Void *p)
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
 
-  render("void");
+  render((char*)"void");
 
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitStruct(Struct *p)
@@ -738,10 +651,7 @@ void PrintAbsyn::visitStruct(Struct *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitFun(Fun *p)
@@ -759,10 +669,7 @@ void PrintAbsyn::visitFun(Fun *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitListType(ListType *listtype)
@@ -783,15 +690,12 @@ void PrintAbsyn::visitENullCast(ENullCast *p)
 
   render('(');
   _i_ = 0; p->type_->accept(this);
-  render(")null");
+  render((char*)")null");
 
   if (oldi > 6) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitEVar(EVar *p)
@@ -804,10 +708,7 @@ void PrintAbsyn::visitEVar(EVar *p)
   if (oldi > 6) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitELitInt(ELitInt *p)
@@ -820,10 +721,7 @@ void PrintAbsyn::visitELitInt(ELitInt *p)
   if (oldi > 6) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitELitTrue(ELitTrue *p)
@@ -831,15 +729,12 @@ void PrintAbsyn::visitELitTrue(ELitTrue *p)
   int oldi = _i_;
   if (oldi > 6) render(_L_PAREN);
 
-  render("true");
+  render((char*)"true");
 
   if (oldi > 6) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitELitFalse(ELitFalse *p)
@@ -847,15 +742,12 @@ void PrintAbsyn::visitELitFalse(ELitFalse *p)
   int oldi = _i_;
   if (oldi > 6) render(_L_PAREN);
 
-  render("false");
+  render((char*)"false");
 
   if (oldi > 6) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitEApp(EApp *p)
@@ -871,10 +763,7 @@ void PrintAbsyn::visitEApp(EApp *p)
   if (oldi > 6) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitEString(EString *p)
@@ -887,10 +776,7 @@ void PrintAbsyn::visitEString(EString *p)
   if (oldi > 6) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitNeg(Neg *p)
@@ -904,10 +790,7 @@ void PrintAbsyn::visitNeg(Neg *p)
   if (oldi > 5) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitNot(Not *p)
@@ -921,10 +804,7 @@ void PrintAbsyn::visitNot(Not *p)
   if (oldi > 5) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitEMul(EMul *p)
@@ -939,10 +819,7 @@ void PrintAbsyn::visitEMul(EMul *p)
   if (oldi > 4) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitEAdd(EAdd *p)
@@ -957,10 +834,7 @@ void PrintAbsyn::visitEAdd(EAdd *p)
   if (oldi > 3) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitERel(ERel *p)
@@ -975,10 +849,7 @@ void PrintAbsyn::visitERel(ERel *p)
   if (oldi > 2) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitEAnd(EAnd *p)
@@ -987,16 +858,13 @@ void PrintAbsyn::visitEAnd(EAnd *p)
   if (oldi > 1) render(_L_PAREN);
 
   _i_ = 2; p->expr_1->accept(this);
-  render("&&");
+  render((char*)"&&");
   _i_ = 1; p->expr_2->accept(this);
 
   if (oldi > 1) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitEOr(EOr *p)
@@ -1005,16 +873,13 @@ void PrintAbsyn::visitEOr(EOr *p)
   if (oldi > 0) render(_L_PAREN);
 
   _i_ = 1; p->expr_1->accept(this);
-  render("||");
+  render((char*)"||");
   _i_ = 0; p->expr_2->accept(this);
 
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitListExpr(ListExpr *listexpr)
@@ -1038,10 +903,7 @@ void PrintAbsyn::visitPlus(Plus *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitMinus(Minus *p)
@@ -1054,10 +916,7 @@ void PrintAbsyn::visitMinus(Minus *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitMulOp(MulOp *p) {} //abstract class
@@ -1072,10 +931,7 @@ void PrintAbsyn::visitTimes(Times *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitDiv(Div *p)
@@ -1088,10 +944,7 @@ void PrintAbsyn::visitDiv(Div *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitMod(Mod *p)
@@ -1104,10 +957,7 @@ void PrintAbsyn::visitMod(Mod *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitRelOp(RelOp *p) {} //abstract class
@@ -1122,10 +972,7 @@ void PrintAbsyn::visitLTH(LTH *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitLE(LE *p)
@@ -1133,15 +980,12 @@ void PrintAbsyn::visitLE(LE *p)
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
 
-  render("<=");
+  render((char*)"<=");
 
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitGTH(GTH *p)
@@ -1154,10 +998,7 @@ void PrintAbsyn::visitGTH(GTH *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitGE(GE *p)
@@ -1165,15 +1006,12 @@ void PrintAbsyn::visitGE(GE *p)
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
 
-  render(">=");
+  render((char*)">=");
 
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitEQU(EQU *p)
@@ -1181,15 +1019,12 @@ void PrintAbsyn::visitEQU(EQU *p)
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
 
-  render("==");
+  render((char*)"==");
 
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitNE(NE *p)
@@ -1197,15 +1032,12 @@ void PrintAbsyn::visitNE(NE *p)
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
 
-  render("!=");
+  render((char*)"!=");
 
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  if(this->erronous_statement == p) {
-    bufAppend(" " +this->error_message);
-    throw end_exception();
-  }
+  try_to_end(p, p->line_number);
 }
 
 void PrintAbsyn::visitInteger(Integer i)
