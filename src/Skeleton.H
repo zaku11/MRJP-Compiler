@@ -26,6 +26,7 @@ public:
   void visitStructMemNoInit(StructMemNoInit *p);
   void visitStructMemInit(StructMemInit *p);
   void visitStructDef(StructDef *p);
+  void visitEmptyStructDef(EmptyStructDef *p);
   void visitIdentExp(IdentExp *p);
   void visitIdentExpSimple(IdentExpSimple *p);
   void visitArgDef(ArgDef *p);

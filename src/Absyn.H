@@ -37,6 +37,7 @@ class FnDef;
 class StructMemNoInit;
 class StructMemInit;
 class StructDef;
+class EmptyStructDef;
 class IdentExp;
 class IdentExpSimple;
 class ArgDef;
@@ -120,6 +121,7 @@ public:
   virtual void visitStructMemNoInit(StructMemNoInit *p) = 0;
   virtual void visitStructMemInit(StructMemInit *p) = 0;
   virtual void visitStructDef(StructDef *p) = 0;
+  virtual void visitEmptyStructDef(EmptyStructDef *p) = 0;
   virtual void visitIdentExp(IdentExp *p) = 0;
   virtual void visitIdentExpSimple(IdentExpSimple *p) = 0;
   virtual void visitArgDef(ArgDef *p) = 0;
@@ -336,6 +338,20 @@ public:
   virtual void accept(Visitor *v);
   virtual StructDef *clone() const;
   void swap(StructDef &);
+};
+
+class EmptyStructDef : public TopDef
+{
+public:
+  Ident ident_;
+
+  EmptyStructDef(const EmptyStructDef &);
+  EmptyStructDef &operator=(const EmptyStructDef &);
+  EmptyStructDef(Ident p1);
+  ~EmptyStructDef();
+  virtual void accept(Visitor *v);
+  virtual EmptyStructDef *clone() const;
+  void swap(EmptyStructDef &);
 };
 
 class StructMemNoInit : public StructMember

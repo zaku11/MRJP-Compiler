@@ -6,6 +6,7 @@ StructMemNoInit.  StructMember ::= Type Ident ";";
 StructMemInit.    StructMember ::= Type Ident "=" Expr ";";
 separator nonempty StructMember "" ;
 StructDef.  TopDef ::= "class " Ident "{" [StructMember] "}" ;
+EmptyStructDef. TopDef ::= "class " Ident "{" "}" ;
 IdentExp. IdentExpan ::= IdentExpan "." Ident ;
 IdentExpSimple. IdentExpan ::= Ident;
 separator nonempty TopDef "" ;

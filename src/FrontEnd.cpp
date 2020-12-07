@@ -156,6 +156,13 @@ void StaticAnalyzer::visitStructDef(StructDef *p) {
   }
 }
 
+void StaticAnalyzer::visitEmptyStructDef(EmptyStructDef *p) {
+  if(p->ident_ == TYPE_INT || p->ident_ == TYPE_VOID || p->ident_ == TYPE_BOOLEAN || p->ident_ == TYPE_STRING) {
+    fail("you can't have " + p->ident_ + " as a struct name\n", p);
+  }
+}
+
+
 void StaticAnalyzer::visitStructMember(StructMember *p) {} //abstract class
 
 void StaticAnalyzer::visitStructMemNoInit(StructMemNoInit *p)
@@ -233,6 +240,13 @@ void StaticAnalyzer::visitListTopDef(ListTopDef *listtopdef)
         fail("struct was defined before\n", struct_def);
       env_of_structures[struct_def->ident_] = members;
     }
+    if(auto struct_def = dynamic_cast<EmptyStructDef*>(*i)) {
+      if(env_of_structures.find(struct_def->ident_) != env_of_structures.end())
+        fail("struct was defined before\n", struct_def);
+      std :: map <Ident, TYPE> no_members;
+      env_of_structures[struct_def->ident_] = no_members;
+    }
+    
   }
   
   if(!was_there_main) {

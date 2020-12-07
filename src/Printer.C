@@ -179,6 +179,23 @@ void PrintAbsyn::visitFnDef(FnDef *p)
   try_to_end(p, p->line_number);
 }
 
+void PrintAbsyn::visitEmptyStructDef(EmptyStructDef *p)
+{
+  int oldi = _i_;
+  if (oldi > 0) render(_L_PAREN);
+
+  render((char*)"class");
+  visitIdent(p->ident_);
+  render('{');
+  render('}');
+
+  if (oldi > 0) render(_R_PAREN);
+
+  _i_ = oldi;
+  try_to_end(p, p->line_number);
+}
+
+
 void PrintAbsyn::visitStructDef(StructDef *p)
 {
   int oldi = _i_;

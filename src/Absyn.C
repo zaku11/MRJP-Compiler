@@ -151,6 +151,49 @@ StructDef *StructDef::clone() const
 
 
 
+/********************   EmptyStructDef    ********************/
+EmptyStructDef::EmptyStructDef(Ident p1)
+{
+  ident_ = p1;
+
+}
+
+EmptyStructDef::EmptyStructDef(const EmptyStructDef & other)
+{
+  ident_ = other.ident_;
+
+}
+
+EmptyStructDef &EmptyStructDef::operator=(const EmptyStructDef & other)
+{
+  EmptyStructDef tmp(other);
+  swap(tmp);
+  return *this;
+}
+
+void EmptyStructDef::swap(EmptyStructDef & other)
+{
+  std::swap(ident_, other.ident_);
+
+}
+
+EmptyStructDef::~EmptyStructDef()
+{
+
+}
+
+void EmptyStructDef::accept(Visitor *v)
+{
+  v->visitEmptyStructDef(this);
+}
+
+EmptyStructDef *EmptyStructDef::clone() const
+{
+  return new EmptyStructDef(*this);
+}
+
+
+
 /********************   StructMemNoInit    ********************/
 StructMemNoInit::StructMemNoInit(Type *p1, Ident p2)
 {

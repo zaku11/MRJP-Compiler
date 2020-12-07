@@ -68,6 +68,8 @@ public:
   void visitFnDef(FnDef *p);
 
   void visitStructDef(StructDef *p);
+  void visitEmptyStructDef(EmptyStructDef *p);
+
   void visitStructMember(StructMember *p); /* abstract class */
   void visitStructMemNoInit(StructMemNoInit *p);
   void visitStructMemInit(StructMemInit *p);

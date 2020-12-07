@@ -45,6 +45,7 @@ void render(char *s);
   void visitProgramDef(ProgramDef *p);
   void visitTopDef(TopDef *p); /* abstract class */
   void visitFnDef(FnDef *p);
+  void visitEmptyStructDef(EmptyStructDef *p);
   void visitStructDef(StructDef *p);
   void visitStructMember(StructMember *p); /* abstract class */
   void visitStructMemNoInit(StructMemNoInit *p);

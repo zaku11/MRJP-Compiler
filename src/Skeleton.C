@@ -50,6 +50,14 @@ void Skeleton::visitStructDef(StructDef *struct_def)
 
 }
 
+void Skeleton::visitEmptyStructDef(EmptyStructDef *empty_struct_def)
+{
+  /* Code For EmptyStructDef Goes Here */
+
+  visitIdent(empty_struct_def->ident_);
+
+}
+
 void Skeleton::visitStructMemNoInit(StructMemNoInit *struct_mem_no_init)
 {
   /* Code For StructMemNoInit Goes Here */
