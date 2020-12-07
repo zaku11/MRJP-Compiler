@@ -10,13 +10,6 @@
 #include <set>
 #include <exception>
 
-
-
-typedef std::string TYPE;
-
-struct NOVALUE {
-};
-
 class front_end_exception : public std::exception {
 public:
   std :: string msg;
@@ -27,29 +20,34 @@ public:
   }
   virtual const char* what() const throw()
   {
-    return "Exception";
+    return "Front end exception";
   }
+};
+
+typedef std::string TYPE;
+const TYPE TYPE_VOID = "void";
+const TYPE TYPE_BOOLEAN = "bool";
+const TYPE TYPE_INT = "int";
+const TYPE TYPE_STRING = "string";
+
+struct NOVALUE {
 };
 
 // NOVALUE means here that the calculation was impossible
 typedef std :: variant <int, bool, std::string, NOVALUE> VALUE;
 typedef std :: map<Ident, TYPE> VarEnv;
 typedef std :: map<Ident, std :: pair<std :: vector<TYPE>, TYPE>> FunEnv;
-typedef std :: map <TYPE, std :: map<Ident, TYPE> > StructEnv;
+typedef std :: map<TYPE, std :: map<Ident, TYPE> > StructEnv;
 
 class StaticAnalyzer : public Visitor
 {
- protected:
+protected:
   const NOVALUE DECOY = NOVALUE{};
-  const TYPE VOID = "void";
-  const TYPE BOOLEAN = "bool";
-  const TYPE INT = "int";
-  const TYPE STRING = "string";
 
-  TYPE last_evaluated_expr = "";
+  TYPE last_evaluated_expr = TYPE_VOID;
   VALUE last_evaluated_expr_value = DECOY;
-  TYPE expected_return_type = "";
-  TYPE last_return = "";
+  TYPE expected_return_type = TYPE_VOID;
+  TYPE last_return = TYPE_VOID;
 
 
   std :: set <Ident> defined_in_current_scope; 
@@ -57,15 +55,9 @@ class StaticAnalyzer : public Visitor
   StructEnv env_of_structures;
   VarEnv env_of_vars;
   FunEnv env_of_functions;
-  // VarEnv new_env_of_vars;
-  // FunEnv new_env_of_functions;
   
   void run_with_rollback(Visitable *v);
-  /* The following are simple heuristics for rendering terminals */
-  /* You may wish to change them */
- public:
-  Visitable *incorrect_statement;
-
+public:
   StaticAnalyzer(void);
   ~StaticAnalyzer(void);
   void analyze(Visitable *v);
