@@ -41,7 +41,8 @@ Struct.    Type ::= Ident ;
 internal   Fun. Type ::= Type "(" [Type] ")" ;
 separator  Type "," ;
 -- Expressions ---------------------------------------------
-ENullCast. Expr6 ::= "(" Type ")null" ;
+ENullCastType. Expr6 ::= "(" Type ")" "null" ;
+ENullCastIdent. Expr6 ::= "(" Ident ")" "null" ;
 EVar.      Expr6 ::= IdentExpan ;
 ELitInt.   Expr6 ::= Integer ;
 ELitTrue.  Expr6 ::= "true" ;

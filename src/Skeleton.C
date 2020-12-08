@@ -291,11 +291,19 @@ void Skeleton::visitFun(Fun *fun)
 
 }
 
-void Skeleton::visitENullCast(ENullCast *e_null_cast)
+void Skeleton::visitENullCastType(ENullCastType *e_null_cast_type)
 {
-  /* Code For ENullCast Goes Here */
+  /* Code For ENullCastType Goes Here */
 
-  e_null_cast->type_->accept(this);
+  e_null_cast_type->type_->accept(this);
+
+}
+
+void Skeleton::visitENullCastIdent(ENullCastIdent *e_null_cast_ident)
+{
+  /* Code For ENullCastIdent Goes Here */
+
+  visitIdent(e_null_cast_ident->ident_);
 
 }
 

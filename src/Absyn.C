@@ -1451,46 +1451,89 @@ Fun *Fun::clone() const
 
 
 
-/********************   ENullCast    ********************/
-ENullCast::ENullCast(Type *p1)
+/********************   ENullCastType    ********************/
+ENullCastType::ENullCastType(Type *p1)
 {
   type_ = p1;
 
 }
 
-ENullCast::ENullCast(const ENullCast & other)
+ENullCastType::ENullCastType(const ENullCastType & other)
 {
   type_ = other.type_->clone();
 
 }
 
-ENullCast &ENullCast::operator=(const ENullCast & other)
+ENullCastType &ENullCastType::operator=(const ENullCastType & other)
 {
-  ENullCast tmp(other);
+  ENullCastType tmp(other);
   swap(tmp);
   return *this;
 }
 
-void ENullCast::swap(ENullCast & other)
+void ENullCastType::swap(ENullCastType & other)
 {
   std::swap(type_, other.type_);
 
 }
 
-ENullCast::~ENullCast()
+ENullCastType::~ENullCastType()
 {
   delete(type_);
 
 }
 
-void ENullCast::accept(Visitor *v)
+void ENullCastType::accept(Visitor *v)
 {
-  v->visitENullCast(this);
+  v->visitENullCastType(this);
 }
 
-ENullCast *ENullCast::clone() const
+ENullCastType *ENullCastType::clone() const
 {
-  return new ENullCast(*this);
+  return new ENullCastType(*this);
+}
+
+
+
+/********************   ENullCastIdent    ********************/
+ENullCastIdent::ENullCastIdent(Ident p1)
+{
+  ident_ = p1;
+
+}
+
+ENullCastIdent::ENullCastIdent(const ENullCastIdent & other)
+{
+  ident_ = other.ident_;
+
+}
+
+ENullCastIdent &ENullCastIdent::operator=(const ENullCastIdent & other)
+{
+  ENullCastIdent tmp(other);
+  swap(tmp);
+  return *this;
+}
+
+void ENullCastIdent::swap(ENullCastIdent & other)
+{
+  std::swap(ident_, other.ident_);
+
+}
+
+ENullCastIdent::~ENullCastIdent()
+{
+
+}
+
+void ENullCastIdent::accept(Visitor *v)
+{
+  v->visitENullCastIdent(this);
+}
+
+ENullCastIdent *ENullCastIdent::clone() const
+{
+  return new ENullCastIdent(*this);
 }
 
 

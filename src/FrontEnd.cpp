@@ -537,8 +537,23 @@ void StaticAnalyzer::visitListType(ListType *listtype)
 
 void StaticAnalyzer::visitExpr(Expr *p) {} //abstract class
 
-void StaticAnalyzer::visitENullCast(ENullCast *p) {
+void StaticAnalyzer::visitENullCastType(ENullCastType *p) {
+  auto type = get_type(p->type_);
+  if(!is_a_valid_type(p->type_, env_of_structures)) 
+    fail(type + " does not name a valild type\n", p);
+
+  if(type == TYPE_VOID || type == TYPE_INT || type == TYPE_BOOLEAN || type == TYPE_STRING) 
+    fail("you can't cast null to basic type\n", p);
+
   last_evaluated_expr = get_type(p->type_);
+  last_evaluated_expr_value = DECOY;
+}
+
+void StaticAnalyzer::visitENullCastIdent(ENullCastIdent *p) {
+  if(env_of_structures.find(p->ident_) == env_of_structures.end())
+    fail(p->ident_ + " does not name a valild type\n", p);
+
+  last_evaluated_expr = p->ident_;
   last_evaluated_expr_value = DECOY;
 }
 

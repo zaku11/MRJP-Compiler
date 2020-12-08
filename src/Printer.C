@@ -700,14 +700,30 @@ void PrintAbsyn::visitListType(ListType *listtype)
 
 void PrintAbsyn::visitExpr(Expr *p) {} //abstract class
 
-void PrintAbsyn::visitENullCast(ENullCast *p)
+void PrintAbsyn::visitENullCastType(ENullCastType *p)
 {
   int oldi = _i_;
   if (oldi > 6) render(_L_PAREN);
 
   render('(');
   _i_ = 0; p->type_->accept(this);
-  render((char*)")null");
+  render(')');
+  render((char*)"null");
+
+  if (oldi > 6) render(_R_PAREN);
+
+  _i_ = oldi;
+}
+
+void PrintAbsyn::visitENullCastIdent(ENullCastIdent *p)
+{
+  int oldi = _i_;
+  if (oldi > 6) render(_L_PAREN);
+
+  render('(');
+  visitIdent(p->ident_);
+  render(')');
+  render((char*)"null");
 
   if (oldi > 6) render(_R_PAREN);
 

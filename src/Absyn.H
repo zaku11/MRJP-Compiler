@@ -64,7 +64,8 @@ class Bool;
 class Void;
 class Struct;
 class Fun;
-class ENullCast;
+class ENullCastType;
+class ENullCastIdent;
 class EVar;
 class ELitInt;
 class ELitTrue;
@@ -148,7 +149,8 @@ public:
   virtual void visitVoid(Void *p) = 0;
   virtual void visitStruct(Struct *p) = 0;
   virtual void visitFun(Fun *p) = 0;
-  virtual void visitENullCast(ENullCast *p) = 0;
+  virtual void visitENullCastType(ENullCastType *p) = 0;
+  virtual void visitENullCastIdent(ENullCastIdent *p) = 0;
   virtual void visitEVar(EVar *p) = 0;
   virtual void visitELitInt(ELitInt *p) = 0;
   virtual void visitELitTrue(ELitTrue *p) = 0;
@@ -755,18 +757,32 @@ public:
   void swap(Fun &);
 };
 
-class ENullCast : public Expr
+class ENullCastType : public Expr
 {
 public:
   Type *type_;
 
-  ENullCast(const ENullCast &);
-  ENullCast &operator=(const ENullCast &);
-  ENullCast(Type *p1);
-  ~ENullCast();
+  ENullCastType(const ENullCastType &);
+  ENullCastType &operator=(const ENullCastType &);
+  ENullCastType(Type *p1);
+  ~ENullCastType();
   virtual void accept(Visitor *v);
-  virtual ENullCast *clone() const;
-  void swap(ENullCast &);
+  virtual ENullCastType *clone() const;
+  void swap(ENullCastType &);
+};
+
+class ENullCastIdent : public Expr
+{
+public:
+  Ident ident_;
+
+  ENullCastIdent(const ENullCastIdent &);
+  ENullCastIdent &operator=(const ENullCastIdent &);
+  ENullCastIdent(Ident p1);
+  ~ENullCastIdent();
+  virtual void accept(Visitor *v);
+  virtual ENullCastIdent *clone() const;
+  void swap(ENullCastIdent &);
 };
 
 class EVar : public Expr

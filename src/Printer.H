@@ -89,7 +89,8 @@ void render(char *s);
   void visitFun(Fun *p);
   void visitListType(ListType *p);
   void visitExpr(Expr *p); /* abstract class */
-  void visitENullCast(ENullCast *p);
+  void visitENullCastType(ENullCastType *p);
+  void visitENullCastIdent(ENullCastIdent *p);
   void visitEVar(EVar *p);
   void visitELitInt(ELitInt *p);
   void visitELitTrue(ELitTrue *p);

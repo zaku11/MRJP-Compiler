@@ -53,7 +53,8 @@ public:
   void visitVoid(Void *p);
   void visitStruct(Struct *p);
   void visitFun(Fun *p);
-  void visitENullCast(ENullCast *p);
+  void visitENullCastType(ENullCastType *p);
+  void visitENullCastIdent(ENullCastIdent *p);
   void visitEVar(EVar *p);
   void visitELitInt(ELitInt *p);
   void visitELitTrue(ELitTrue *p);
