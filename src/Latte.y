@@ -794,6 +794,7 @@ Program : ListTopDef {  std::reverse($1->begin(),$1->end()) ;$$ = new ProgramDef
 ;
 TopDef : Type _IDENT_ _SYMB_0 ListArg _SYMB_1 Block {  std::reverse($4->begin(),$4->end()) ;$$ = new FnDef($1, $2, $4, $6); $$->line_number = yy_mylinenumber;  } 
   | _SYMB_26 _IDENT_ _SYMB_4 ListStructMember _SYMB_5 {  std::reverse($4->begin(),$4->end()) ;$$ = new StructDef($2, $4); $$->line_number = yy_mylinenumber;  }
+  | _SYMB_26 _IDENT_ _SYMB_4 _SYMB_5 {  $$ = new EmptyStructDef($2); $$->line_number = yy_mylinenumber;  }
 ;
 StructMember : Type _IDENT_ _SYMB_2 {  $$ = new StructMemNoInit($1, $2); $$->line_number = yy_mylinenumber;  } 
   | Type _IDENT_ _SYMB_3 Expr _SYMB_2 {  $$ = new StructMemInit($1, $2, $4); $$->line_number = yy_mylinenumber;  }

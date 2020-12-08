@@ -19,23 +19,37 @@ using std :: to_string;
 
 TYPE get_type(Type* val) {
   if(dynamic_cast<Int*>(val))
-    return "int";
+    return TYPE_INT;
   if(dynamic_cast<Str*>(val))
-    return "string";
+    return TYPE_STRING;
   if(dynamic_cast<Bool*>(val))
-    return "bool";
+    return TYPE_BOOLEAN;
   if(dynamic_cast<Void*>(val))
-    return "void";
+    return TYPE_VOID;
   if(auto str = dynamic_cast<Struct*>(val))
     return str->ident_;
   
-  return "NULL";
+  return "";
 }
+
+bool is_a_basic_type(Type* val) {
+  TYPE type = get_type(val);
+  if(type == TYPE_VOID || type == TYPE_BOOLEAN || type == TYPE_STRING || type == TYPE_INT)
+    return true;
+  return false;
+}
+
+bool is_a_basic_type(Ident ident) {
+  if(ident == TYPE_VOID || ident == TYPE_BOOLEAN || ident == TYPE_STRING || ident == TYPE_INT)
+    return true;
+  return false;
+}
+
 
 bool is_a_valid_type(Type* val, StructEnv &str_env) {
   TYPE type = get_type(val);
-  
-  if(type == TYPE_VOID || type == TYPE_BOOLEAN || type == TYPE_STRING || type == TYPE_INT || str_env.find(type) != str_env.end()) 
+
+  if(is_a_basic_type(val) || str_env.find(type) != str_env.end()) 
     return true;
   return false;
 }
@@ -122,7 +136,7 @@ void StaticAnalyzer::visitFnDef(FnDef *p)
 }
 
 void StaticAnalyzer::visitStructDef(StructDef *p) {
-  if(p->ident_ == TYPE_INT || p->ident_ == TYPE_VOID || p->ident_ == TYPE_BOOLEAN || p->ident_ == TYPE_STRING) {
+  if(is_a_basic_type(p->ident_)) {
     fail("you can't have " + p->ident_ + " as a struct name\n", p);
   }
   set <Ident> present_args;
@@ -157,7 +171,7 @@ void StaticAnalyzer::visitStructDef(StructDef *p) {
 }
 
 void StaticAnalyzer::visitEmptyStructDef(EmptyStructDef *p) {
-  if(p->ident_ == TYPE_INT || p->ident_ == TYPE_VOID || p->ident_ == TYPE_BOOLEAN || p->ident_ == TYPE_STRING) {
+  if(is_a_basic_type(p->ident_)) {
     fail("you can't have " + p->ident_ + " as a struct name\n", p);
   }
 }
@@ -538,7 +552,12 @@ void StaticAnalyzer::visitListType(ListType *listtype)
 void StaticAnalyzer::visitExpr(Expr *p) {} //abstract class
 
 void StaticAnalyzer::visitENullCast(ENullCast *p) {
-  last_evaluated_expr = get_type(p->type_);
+  auto null_type = get_type(p->type_);
+  if(is_a_basic_type(null_type))
+    fail("you can't cast null to a basic type\n", p);
+  if(!is_a_valid_type(p->type_, env_of_structures)) 
+    fail("struct " + null_type + " was not recognized\n", p);
+  last_evaluated_expr = null_type;
   last_evaluated_expr_value = DECOY;
 }
 
