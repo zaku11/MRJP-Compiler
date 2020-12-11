@@ -1,8 +1,5 @@
-/*** BNFC-Generated Pretty Printer and Abstract Syntax Viewer ***/
-
 #include <string>
 #include <iostream>
-#include <memory>
 #include <variant>
 #include <map>
 #include <set>
@@ -15,6 +12,7 @@ using std :: string;
 using std :: set;
 using std :: map;
 using std :: to_string;
+using std :: get_if;
 
 
 TYPE get_type(Type* val) {
@@ -73,7 +71,7 @@ void check_for_type_matching(TYPE type1, TYPE type2, Visitable *v) {
     fail("got type " + type2 + " but expected " + type1 + "\n", v);
 }
 
-void same_scope_redefinition(Ident ident, std:: set<Ident> *defined_in_current_scope, Visitable* v) {
+void same_scope_redefinition(Ident ident, set<Ident> *defined_in_current_scope, Visitable* v) {
   if(defined_in_current_scope->find(ident) != defined_in_current_scope->end())
     fail("variable " + ident + " got redefined in this same scope\n", v);
 }
@@ -112,7 +110,7 @@ void StaticAnalyzer::visitFnDef(FnDef *p)
       if(get_type(arg->type_) == TYPE_VOID)
         fail("function can't have void as an argument\n", arg);
       if(std::find(arg_names.begin(), arg_names.end(), arg->ident_) != arg_names.end()) 
-        fail("variable " + arg->ident_ + " is duplicated in signature" ,arg);
+        fail("variable " + arg->ident_ + " is duplicated in signature", arg);
 
       arg_types.push_back(get_type(arg->type_));
       arg_names.push_back(arg->ident_);
@@ -145,12 +143,12 @@ void StaticAnalyzer::visitStructDef(StructDef *p) {
     auto member = ((*(p->liststructmember_))[i]);
     if(auto no_init_member = dynamic_cast<StructMemNoInit*>(member)) {
       if(get_type(no_init_member->type_) == TYPE_VOID)
-        fail("struct can't have TYPE_VOID as an attribute\n",no_init_member);
+        fail("struct can't have void as an attribute\n",no_init_member);
       if(!is_a_valid_type(no_init_member->type_, env_of_structures)) 
         fail(get_type(no_init_member->type_) + " does not name a valid type\n", no_init_member);
-
       if(present_args.find(no_init_member->ident_) != present_args.end()) 
         fail("member" + no_init_member->ident_ + " was already present\n", no_init_member);
+
       present_args.insert(no_init_member->ident_);
     }
     
@@ -159,12 +157,11 @@ void StaticAnalyzer::visitStructDef(StructDef *p) {
         fail("struct can't have TYPE_VOID as an attribute\n", init_member);
       if(!is_a_valid_type(init_member->type_, env_of_structures)) 
         fail(get_type(init_member->type_) + " does not name a valid type\n", init_member);
+      if(present_args.find(init_member->ident_) != present_args.end()) 
+        fail("member" + init_member->ident_ + " was already present\n", init_member);
 
       init_member->expr_->accept(this);
       check_for_type_matching(get_type(init_member->type_), last_evaluated_expr, init_member);
-
-      if(present_args.find(init_member->ident_) != present_args.end()) 
-        fail("member" + init_member->ident_ + " was already present\n", init_member);
       present_args.insert(init_member->ident_);
     }
   }
@@ -241,7 +238,7 @@ void StaticAnalyzer::visitListTopDef(ListTopDef *listtopdef)
       env_of_functions[fn_def->ident_] = make_pair(arg_types, get_type(fn_def->type_));
     }
     if(auto struct_def = dynamic_cast<StructDef*>(*i)) {
-      std :: map <Ident, TYPE> members;
+      map <Ident, TYPE> members;
       auto items = struct_def->liststructmember_;
       for(auto item : *items) {
         if(auto member = dynamic_cast<StructMemNoInit*>(item))
@@ -257,7 +254,7 @@ void StaticAnalyzer::visitListTopDef(ListTopDef *listtopdef)
     if(auto struct_def = dynamic_cast<EmptyStructDef*>(*i)) {
       if(env_of_structures.find(struct_def->ident_) != env_of_structures.end())
         fail("struct was defined before\n", struct_def);
-      std :: map <Ident, TYPE> no_members;
+      map <Ident, TYPE> no_members;
       env_of_structures[struct_def->ident_] = no_members;
     }
     
@@ -359,7 +356,7 @@ void StaticAnalyzer::visitDecl(Decl *p)
         same_scope_redefinition(init->ident_1, &defined_in_current_scope, init);
         
         if(get_type(p->type_) != init->ident_2) 
-          fail("LINE " + to_string(init->line_number) + " : " + init->ident_1 + " was declared as a " + get_type(p->type_) + " but was assigned a new " + init->ident_2 + "\n", init);
+          fail(init->ident_1 + " was declared as a " + get_type(p->type_) + " but was assigned a new " + init->ident_2 + "\n", init);
         
         defined_in_current_scope.insert(init->ident_1);
         env_of_vars[init->ident_1] = get_type(p->type_);
@@ -370,7 +367,7 @@ void StaticAnalyzer::visitDecl(Decl *p)
 
 void StaticAnalyzer::visitNewStruct(NewStruct *p) {
   // Here identexpan_ is a id of a variable
-  // And indent_ is a name of the struct
+  // And ident_ is a name of the struct
   p->identexpan_->accept(this);
   check_for_type_matching(p->ident_, last_evaluated_expr, p);
 }
@@ -426,16 +423,15 @@ void StaticAnalyzer::visitCond(Cond *p)
   auto ret_tmp = last_return;
   p->stmt_->accept(this);
 
-  if(auto val = std::get_if<bool>(&cond_value)) { {
+  if(auto val = get_if<bool>(&cond_value)) {
     if((*val) == true) {
       // This means that we are statically sure we're entering the IF branch
       // So if there was a return(in the IF) and there was no return before then this is a valid code 
     }
-    else {
+    else
       last_return = ret_tmp;
-    }
   }
-  } else {
+  else {
     last_return = ret_tmp;
   }
   
@@ -461,7 +457,7 @@ void StaticAnalyzer::visitCondElse(CondElse *p)
   if(ret1 != ret2) {
     last_return = ret_before_all_operations;
   }
-  if(auto val = std::get_if<bool>(&cond_value)) {
+  if(auto val = get_if<bool>(&cond_value)) {
     if((*val) == true) {
       last_return = ret1;
     }
@@ -481,7 +477,7 @@ void StaticAnalyzer::visitWhile(While *p)
   auto ret_tmp = last_return;
   p->stmt_->accept(this);
 
-  if(auto val = std::get_if<bool>(&cond_value)) {
+  if(auto val = get_if<bool>(&cond_value)) {
     if((*val) == true) {
       // This means that we are statically sure we're entering the WHILE loop
       // So if there was a return and there was no return before then this is a
@@ -610,7 +606,7 @@ void StaticAnalyzer::visitNeg(Neg *p)
 {
   p->expr_->accept(this);
   check_for_type_matching(TYPE_INT, last_evaluated_expr, p);
-  if(auto val = std::get_if<int>(&last_evaluated_expr_value))
+  if(auto val = get_if<int>(&last_evaluated_expr_value))
     last_evaluated_expr_value = -(*val);
   else 
     last_evaluated_expr_value = DECOY;
@@ -620,7 +616,7 @@ void StaticAnalyzer::visitNot(Not *p)
 {
   p->expr_->accept(this);
   check_for_type_matching(TYPE_BOOLEAN, last_evaluated_expr, p);
-  if(auto val = std::get_if<bool>(&last_evaluated_expr_value))
+  if(auto val = get_if<bool>(&last_evaluated_expr_value))
     last_evaluated_expr_value = !(*val);
   else 
     last_evaluated_expr_value = DECOY;
@@ -636,8 +632,8 @@ void StaticAnalyzer::visitEMul(EMul *p)
   auto i2 = last_evaluated_expr_value;
 
   last_evaluated_expr_value = DECOY;
-  if(auto val1 = std::get_if<int>(&i1)) 
-    if(auto val2 = std::get_if<int>(&i2)) { 
+  if(auto val1 = get_if<int>(&i1)) 
+    if(auto val2 = get_if<int>(&i2)) { 
       if(dynamic_cast<Times*>(p->mulop_))
         last_evaluated_expr_value = (*val1) * (*val2);
       if(dynamic_cast<Mod*>(p->mulop_)) {
@@ -671,16 +667,16 @@ void StaticAnalyzer::visitEAdd(EAdd *p)
   }
 
   last_evaluated_expr_value = DECOY;
-  if(auto val1 = std::get_if<int>(&v1)) 
-    if(auto val2 = std::get_if<int>(&v2)) { 
+  if(auto val1 = get_if<int>(&v1)) 
+    if(auto val2 = get_if<int>(&v2)) { 
       if(dynamic_cast<Plus*>(p->addop_))
         last_evaluated_expr_value = (*val1) + (*val2);
       else 
         last_evaluated_expr_value = (*val1) - (*val2);
     }
 
-  if(auto val1 = std::get_if<string>(&v1)) 
-    if(auto val2 = std::get_if<string>(&v2)) {
+  if(auto val1 = get_if<string>(&v1)) 
+    if(auto val2 = get_if<string>(&v2)) {
       if(dynamic_cast<Plus*>(p->addop_)) 
         last_evaluated_expr_value = (*val1) + (*val2);
       else 
@@ -710,8 +706,8 @@ void StaticAnalyzer::visitERel(ERel *p)
     if(!(dynamic_cast<EQU*>(p->relop_) || dynamic_cast<NE*>(p->relop_)))
       fail("this operation is not allowed for " + type1 + "\n", p);
       
-    if(auto b1 = std::get_if<bool>(&v1)) 
-      if(auto b2 = std::get_if<bool>(&v2)) {
+    if(auto b1 = get_if<bool>(&v1)) 
+      if(auto b2 = get_if<bool>(&v2)) {
         if(dynamic_cast<EQU*>(p->relop_)) 
           last_evaluated_expr_value = ((*b1) == (*b2));
         if(dynamic_cast<NE*>(p->relop_)) 
@@ -720,8 +716,8 @@ void StaticAnalyzer::visitERel(ERel *p)
     return;
   }
   if(type1 == TYPE_INT) {
-    if(auto i1 = std::get_if<int>(&v1)) 
-      if(auto i2 = std::get_if<int>(&v2)) {
+    if(auto i1 = get_if<int>(&v1)) 
+      if(auto i2 = get_if<int>(&v2)) {
         if(dynamic_cast<LTH*>(p->relop_))
           last_evaluated_expr_value = (*i1 < *i2);    
         if(dynamic_cast<LE*>(p->relop_))
@@ -738,8 +734,8 @@ void StaticAnalyzer::visitERel(ERel *p)
     return;
   }
   if(type1 == TYPE_STRING) {
-    if(auto s1 = std::get_if<string>(&v1)) 
-      if(auto s2 = std::get_if<string>(&v2)) {
+    if(auto s1 = get_if<string>(&v1)) 
+      if(auto s2 = get_if<string>(&v2)) {
         if(dynamic_cast<LTH*>(p->relop_))
           last_evaluated_expr_value = (*s1 < *s2);    
         if(dynamic_cast<LE*>(p->relop_))
@@ -771,8 +767,8 @@ void StaticAnalyzer::visitEAnd(EAnd *p)
   last_evaluated_expr = TYPE_BOOLEAN;
 
   last_evaluated_expr_value = DECOY;
-  if(auto val1 = std::get_if<bool>(&v1)) 
-    if(auto val2 = std::get_if<bool>(&v2)) 
+  if(auto val1 = get_if<bool>(&v1)) 
+    if(auto val2 = get_if<bool>(&v2)) 
       last_evaluated_expr_value = *val1 && *val2;
 
 }
@@ -789,8 +785,8 @@ void StaticAnalyzer::visitEOr(EOr *p)
 
 
   last_evaluated_expr_value = DECOY;
-  if(auto val1 = std::get_if<bool>(&v1)) 
-    if(auto val2 = std::get_if<bool>(&v2)) 
+  if(auto val1 = get_if<bool>(&v1)) 
+    if(auto val2 = get_if<bool>(&v2)) 
       last_evaluated_expr_value = *val1 || *val2;
 
 }

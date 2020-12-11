@@ -26,7 +26,7 @@ public:
 
 typedef std::string TYPE;
 const TYPE TYPE_VOID = "void";
-const TYPE TYPE_BOOLEAN = "bool";
+const TYPE TYPE_BOOLEAN = "boolean";
 const TYPE TYPE_INT = "int";
 const TYPE TYPE_STRING = "string";
 

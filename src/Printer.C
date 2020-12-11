@@ -124,7 +124,7 @@ char *PrintAbsyn::print(Visitable *v)
     return buf_;
   }
   catch(end_exception &e) {
-    int ptr = this->cur_;
+    int ptr = this->cur_ - 1;
     int how_many_enters = 3;
     while(how_many_enters > 0 && ptr > 0) {
       if(buf_[ptr] == '\n')

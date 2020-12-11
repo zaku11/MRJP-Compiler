@@ -50,24 +50,20 @@ int main(int argc, char ** argv)
   Program *parse_tree = pProgram(input);
   if (parse_tree)
   {
-    if (!quiet) {
-      
-      StaticAnalyzer *p = new StaticAnalyzer();
-      try {
-        p->analyze(parse_tree);
-        std::cerr << "OK\n";
-        exit(0);
-      }
-      catch(front_end_exception &e) {
-        std::cerr << "ERROR\n";
-        PrintAbsyn *p2 = new PrintAbsyn(e.msg, e.erronous_statement);
-        printf("%s", p2->print(parse_tree));
-        exit(-1);
-      }
-
+    StaticAnalyzer *p = new StaticAnalyzer();
+    try {
+      p->analyze(parse_tree);
+      std::cerr << "OK\n";
+      exit(0);
+    }
+    catch(front_end_exception &e) {
+      std::cerr << "ERROR\n";
+      PrintAbsyn *p2 = new PrintAbsyn(e.msg, e.erronous_statement);
+      printf("%s", p2->print(parse_tree));
+      exit(-1);
     }
     return 0;
   }
-  return 1;
+  return -1;
 }
 
