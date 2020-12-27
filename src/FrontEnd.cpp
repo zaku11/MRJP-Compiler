@@ -555,30 +555,40 @@ void StaticAnalyzer::visitENullCast(ENullCast *p) {
     fail("struct " + null_type + " was not recognized\n", p);
   last_evaluated_expr = null_type;
   last_evaluated_expr_value = DECOY;
+
+  p->expr_type_ = last_evaluated_expr;
 }
 
 void StaticAnalyzer::visitEVar(EVar *p)
 {
   p->identexpan_->accept(this);
   last_evaluated_expr_value = DECOY;
+
+  p->expr_type_ = last_evaluated_expr;
 }
 
 void StaticAnalyzer::visitELitInt(ELitInt *p)
 {
   last_evaluated_expr = TYPE_INT;
   last_evaluated_expr_value = p->integer_;
+
+  p->expr_type_ = last_evaluated_expr;
 }
 
 void StaticAnalyzer::visitELitTrue(ELitTrue *p)
 {
   last_evaluated_expr = TYPE_BOOLEAN;
   last_evaluated_expr_value = true;
+
+  p->expr_type_ = last_evaluated_expr;
 }
 
 void StaticAnalyzer::visitELitFalse(ELitFalse *p)
 {
   last_evaluated_expr = TYPE_BOOLEAN;
   last_evaluated_expr_value = false;
+
+  p->expr_type_ = last_evaluated_expr;
 }
 
 void StaticAnalyzer::visitEApp(EApp *p)
@@ -594,12 +604,16 @@ void StaticAnalyzer::visitEApp(EApp *p)
   }
   last_evaluated_expr = env_of_functions[p->ident_].second;
   last_evaluated_expr_value = DECOY;
+
+  p->expr_type_ = last_evaluated_expr;
 }
 
 void StaticAnalyzer::visitEString(EString *p)
 {
   last_evaluated_expr = TYPE_STRING;
   last_evaluated_expr_value = p->string_;
+
+  p->expr_type_ = last_evaluated_expr;
 }
 
 void StaticAnalyzer::visitNeg(Neg *p)
@@ -610,6 +624,8 @@ void StaticAnalyzer::visitNeg(Neg *p)
     last_evaluated_expr_value = -(*val);
   else 
     last_evaluated_expr_value = DECOY;
+
+  p->expr_type_ = last_evaluated_expr;
 }
 
 void StaticAnalyzer::visitNot(Not *p)
@@ -620,6 +636,8 @@ void StaticAnalyzer::visitNot(Not *p)
     last_evaluated_expr_value = !(*val);
   else 
     last_evaluated_expr_value = DECOY;
+
+  p->expr_type_ = last_evaluated_expr;
 }
 
 void StaticAnalyzer::visitEMul(EMul *p)
@@ -647,6 +665,8 @@ void StaticAnalyzer::visitEMul(EMul *p)
         last_evaluated_expr_value = (*val1) / (*val2);
       }
     }
+
+  p->expr_type_ = last_evaluated_expr;
 }
 
 void StaticAnalyzer::visitEAdd(EAdd *p)
@@ -683,7 +703,7 @@ void StaticAnalyzer::visitEAdd(EAdd *p)
         fail("you can't substract strings.\n", p); 
     }
   
-  
+  p->expr_type_ = last_evaluated_expr; 
 }
 
 void StaticAnalyzer::visitERel(ERel *p)
@@ -698,6 +718,8 @@ void StaticAnalyzer::visitERel(ERel *p)
 
   last_evaluated_expr = TYPE_BOOLEAN;
   last_evaluated_expr_value = DECOY;
+
+  p->expr_type_ = last_evaluated_expr;
 
   if(type1 != type2 || type1 == TYPE_VOID) 
     fail("cannot compare " + type1 + " and " + type2 + "\n", p);
@@ -754,6 +776,7 @@ void StaticAnalyzer::visitERel(ERel *p)
   // If we are here that means that have a custom struct
   if(!(dynamic_cast<EQU*>(p->relop_) || dynamic_cast<NE*>(p->relop_))) 
     fail("you can only == and != for type " + type1 + "\n", p);
+
 }
 
 void StaticAnalyzer::visitEAnd(EAnd *p)
@@ -771,6 +794,7 @@ void StaticAnalyzer::visitEAnd(EAnd *p)
     if(auto val2 = get_if<bool>(&v2)) 
       last_evaluated_expr_value = *val1 && *val2;
 
+  p->expr_type_ = last_evaluated_expr;
 }
 
 void StaticAnalyzer::visitEOr(EOr *p)
@@ -789,6 +813,7 @@ void StaticAnalyzer::visitEOr(EOr *p)
     if(auto val2 = get_if<bool>(&v2)) 
       last_evaluated_expr_value = *val1 || *val2;
 
+  p->expr_type_ = last_evaluated_expr;
 }
 
 void StaticAnalyzer::visitListExpr(ListExpr *listexpr)

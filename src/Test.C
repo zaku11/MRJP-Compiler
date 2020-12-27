@@ -10,6 +10,7 @@
 #include "FrontEnd.H"
 #include "Absyn.H"
 #include "Printer.H"
+#include "LLVM.H"
 #include <iostream>
 
 void usage() {
@@ -54,6 +55,8 @@ int main(int argc, char ** argv)
     try {
       p->analyze(parse_tree);
       std::cerr << "OK\n";
+      LLVM *llvm = new LLVM();
+      llvm->run(parse_tree);
       exit(0);
     }
     catch(front_end_exception &e) {

@@ -267,6 +267,8 @@ public:
 class Expr : public Visitable
 {
 public:
+  String expr_type_;
+
   virtual Expr *clone() const = 0;
   int line_number;
 };

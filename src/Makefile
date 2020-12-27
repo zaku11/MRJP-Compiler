@@ -4,7 +4,7 @@ FLEX=flex
 
 BISON=bison --warnings=none
 
-OBJS=Absyn.o Lexer.o Parser.o FrontEnd.o Printer.o
+OBJS=Absyn.o Lexer.o Parser.o FrontEnd.o Printer.o LLVM.o
 
 .PHONY: clean distclean
 
@@ -37,11 +37,14 @@ Parser.o: Parser.C Absyn.H
 FrontEnd.o: FrontEnd.cpp FrontEnd.H Absyn.H
 	${CC} -c FrontEnd.cpp
 
+LLVM.o: LLVM.cpp LLVM.H Absyn.H
+	${CC} -c LLVM.cpp
+
 Printer.o: Printer.C Printer.H Absyn.H
 	${CC} -c Printer.C
 
 Skeleton.o: Skeleton.C Skeleton.H Absyn.H
 	${CC} -Wno-unused-parameter -c Skeleton.C
 
-Test.o: Test.C Parser.H FrontEnd.H Absyn.H Printer.H
+Test.o: Test.C Parser.H FrontEnd.H Absyn.H Printer.H LLVM.H
 	${CC} -c Test.C
