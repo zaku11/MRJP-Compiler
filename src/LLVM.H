@@ -32,6 +32,11 @@ protected:
   map<Ident, int> last_var_numbers;
   map<Ident, pair<Type*, vector<Type*> > > function_data;
 
+  // This maps a struct name into a map (member_name -> (member_type, his number))
+  map<Ident, map <string, pair<string, int> > > struct_data;
+
+  string current_exp_type;
+  string last_expr_chain;
   // string label_true;
   // string label_false;
 
@@ -41,6 +46,7 @@ public:
   LLVM(void);
   ~LLVM(void);
   // void allocAndStore(Ident id);
+  void deleteLastLine();
   void addToOutput(string text);
   void addConstant(string text);
   void addReference(string id);

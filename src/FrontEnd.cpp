@@ -204,6 +204,8 @@ void StaticAnalyzer::visitIdentExpSimple(IdentExpSimple *p) {
   check_for_existence(p->ident_, &env_of_vars, p);
   last_evaluated_expr = env_of_vars[p->ident_];
   last_evaluated_expr_value = DECOY;
+
+  p->my_type_ = env_of_vars[p->ident_];
 }
 
 

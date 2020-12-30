@@ -406,6 +406,7 @@ class IdentExpSimple : public IdentExpan
 {
 public:
   Ident ident_;
+  String my_type_;
 
   IdentExpSimple(const IdentExpSimple &);
   IdentExpSimple &operator=(const IdentExpSimple &);

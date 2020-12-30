@@ -62,7 +62,7 @@ int main(int argc, char ** argv)
     catch(front_end_exception &e) {
       std::cerr << "ERROR\n";
       PrintAbsyn *p2 = new PrintAbsyn(e.msg, e.erronous_statement);
-      printf("%s", p2->print(parse_tree));
+      std :: cerr << p2->print(parse_tree) << "\n";
       exit(-1);
     }
     return 0;

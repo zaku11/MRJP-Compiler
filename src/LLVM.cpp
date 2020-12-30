@@ -18,6 +18,16 @@ using std :: to_string;
 const String TYPE_INT = "i32";
 const String TYPE_BOOL = "i1";
 const String TYPE_STRING = "i8*";
+const String TYPE_VOID = "void";
+
+void LLVM::deleteLastLine() {
+  int ptr = output.size() - 2;
+  while(ptr > 0 && output[ptr] != '\n') ptr--;
+  ptr++;
+
+  output = output.substr(0, ptr);
+  last_var--;
+}
 
 string transform_type_name(Type &type) {
   if(dynamic_cast<Int*>(&type)) return "i32";
@@ -25,7 +35,7 @@ string transform_type_name(Type &type) {
   if(dynamic_cast<Str*>(&type)) return "i8*";
   if(dynamic_cast<Void*>(&type)) return "void";
   if(auto str = dynamic_cast<Struct*>(&type))
-    return str->ident_;
+    return "%" + str->ident_ + "*";
   return "";
 }
 
@@ -33,7 +43,7 @@ string cpp_to_llvm_types(String cpp_type) {
   if(cpp_type == "int") return "i32";
   if(cpp_type == "boolean") return "i1";
   if(cpp_type == "string") return "i8*";
-  return cpp_type;
+  return "%" + cpp_type + "*";
 }
 
 
@@ -104,8 +114,11 @@ string LLVM::getCurrentVarNum(Ident id) {
 }
 
 string LLVM::getCurrentVarNum(IdentExpan &id) {
-  auto simple_ident = dynamic_cast<IdentExpSimple*>(&id)->ident_;
-  return "_" + simple_ident + "_" + to_string(current_var_number[simple_ident]);
+  if(auto simple_ident = dynamic_cast<IdentExpSimple*>(&id))
+    return "_" + simple_ident->ident_ + "_" + to_string(current_var_number[simple_ident->ident_]);
+  if(auto ident_exp = dynamic_cast<IdentExp*>(&id))
+    return getCurrentVarNum(*ident_exp->identexpan_);
+  return "";
 }
 
 string LLVM::genLabel(string text) {
@@ -150,11 +163,8 @@ void LLVM::run(Visitable *v)
 
   function_data["error"] = std :: make_pair(&single_void, empty_vec);
 
-
-
   v->accept(this);
   std :: cout << this->output;
-
 }
 
 void LLVM::visitProgram(Program *p) {} //abstract class
@@ -203,17 +213,41 @@ void LLVM::visitFnDef(FnDef *p)
       addToOutput("ret i8* %tmp" + to_string(last_var + 1));
       last_var++; 
     }
+    if(type[0] == '%')
+      addToOutput("ret " + type + " null\n");
   }
 
   addToOutput("}\n");
 }
 
 void LLVM::visitStructDef(StructDef *p) {
-  // TODO
+  addToOutput("%" + p->ident_ + " = type {\n");
+  map <string, pair<string, int> > fields;
+  int iter = 0;
+  for (ListStructMember::const_iterator i = p->liststructmember_->begin() ; i != p->liststructmember_->end() ; ++i)
+  {
+    if(iter != 0) {
+      addToOutput(",\n");
+    }
+    if(auto no_init = dynamic_cast<StructMemNoInit*>(*i)) {
+      auto type_name = transform_type_name(*no_init->type_); 
+      addToOutput(type_name);
+      if(type_name[0] == '%') {
+        type_name = type_name.substr(1, type_name.size() - 2);
+      }
+      fields[no_init->ident_] = std :: make_pair(type_name, iter);
+    }
+    iter++;
+  }
+  addToOutput("\n}\n");
+  struct_data[p->ident_] = fields;
+
 }
 
 void LLVM::visitEmptyStructDef(EmptyStructDef *p) {
-  // TODO
+  addToOutput("%" + p->ident_ + " = type {}\n");
+  map <string, pair<string, int> > fields;
+  struct_data[p->ident_] = fields;
 }
 
 
@@ -234,14 +268,28 @@ void LLVM::visitListStructMember(ListStructMember *liststructmember)
 void LLVM::visitIdentExpan(IdentExpan *p) {} /* abstract class */
 
 void LLVM::visitIdentExp(IdentExp *p) {
-  if(p->identexpan_)
-    p->identexpan_->accept(this);
+  if(p->identexpan_) {
+
+      p->identexpan_->accept(this);
+
+      addToOutput("%i" + to_string(last_var + 1) + " = getelementptr inbounds %" + current_exp_type + ", %" + current_exp_type + "* %i" + to_string(last_var) + ", i32 0, i32 " + to_string(struct_data[current_exp_type][p->ident_].second) +"\n");
+
+      addToOutput("%i" + to_string(last_var + 2) + " = load %" + current_exp_type + "*, %" + current_exp_type + "** %i" + to_string(last_var + 1) + "\n");
+      last_var += 2;
+
+      current_exp_type = struct_data[current_exp_type][p->ident_].first;
+  }
   
   // TODO
 }
 
 void LLVM::visitIdentExpSimple(IdentExpSimple *p) {
-  // TODO
+  current_exp_type = p->my_type_;
+
+  addToOutput("%i" + to_string(last_var + 1) + " = load %" + current_exp_type + "*, %" + current_exp_type + "** %" + getCurrentVarNum(p->ident_) + "\n");
+  last_var++;
+
+  // last_var++;
 }
 
 
@@ -251,8 +299,9 @@ void LLVM::visitListTopDef(ListTopDef *listtopdef)
   addToOutput("@emptyStr = internal constant [0 x i8] c\"\"\n");
   addToOutput("declare void @free(i8*)\n");
   addToOutput("declare i8* @concat(i8*, i8*)\n");
-  addToOutput("declare void @error()\n");
+  addToOutput("declare i8* @malloc(i32)\n");
 
+  addToOutput("declare void @error()\n");
   addToOutput("declare void @printInt(i32 %x)\n");
   addToOutput("declare void @printString(i8* %s)\n");
   addToOutput("declare i32 @readInt()\n");
@@ -275,7 +324,6 @@ void LLVM::visitArg(Arg *p) {} //abstract class
 
 void LLVM::visitArgDef(ArgDef *p)
 {
-  
   addToOutput(transform_type_name(*p->type_) + " %" + p->ident_);
 }
 
@@ -351,17 +399,25 @@ void LLVM::visitDecl(Decl *p)
       if(dynamic_cast<Int*>(p->type_)) {
         addToOutput("%" + getCurrentVarNum(no_init->ident_) + " = alloca i32\n");
         addToOutput("store i32 0, i32* %" + getCurrentVarNum(no_init->ident_) + "\n");
+        continue;
       }
       if(dynamic_cast<Bool*>(p->type_)) {
         addToOutput("%" + getCurrentVarNum(no_init->ident_) + " = alloca i1\n");
         addToOutput("store i1 0, i1* %" + getCurrentVarNum(no_init->ident_) + "\n");
+        continue;
       }
       if(dynamic_cast<Str*>(p->type_)) {
         addToOutput("%" + getCurrentVarNum(no_init->ident_) + " = alloca i8*\n");
         addToOutput("%i" + to_string(last_var + 1) + " = bitcast [0 x i8]* @emptyStr to i8*\n");
         addToOutput("store i8* %i" + to_string(last_var + 1) +  ", i8** %" + getCurrentVarNum(no_init->ident_) + "\n");
         last_var++;
+        continue;
       }
+      auto type = transform_type_name(*p->type_);
+      addToOutput("%" + getCurrentVarNum(no_init->ident_) + " = alloca " + type + "\n");
+      addToOutput("store " + type + " null, " + type +  "* %" + getCurrentVarNum(no_init->ident_) + "\n");
+      last_var++;
+      
     }
     if(auto init = dynamic_cast<Init*>(*i)) {
       auto ans = processSingle(init->expr_);
@@ -369,28 +425,54 @@ void LLVM::visitDecl(Decl *p)
 
       current_var_number[init->ident_] = last_var_numbers[init->ident_] + 1;
       last_var_numbers[init->ident_] += 1;
-
       addToOutput("%" + getCurrentVarNum(init->ident_) + " = alloca " + type + "\n");
       addToOutput("store " + type + " " + ans + ", " + type + "* %" + getCurrentVarNum(init->ident_) + "\n");
-
-      // if(dynamic_cast<Int*>(p->type_)) {
-      //   addToOutput("%" + getCurrentVarNum(init->ident_) + " = alloca i32\n");
-      //   addToOutput("store i32 " + ans + ", i32* %" + getCurrentVarNum(init->ident_) + "\n");
-      // }
-      // if(dynamic_cast<Bool*>(p->type_)) {
-      //   addToOutput("%" + getCurrentVarNum(init->ident_) + " = alloca i1\n");
-      //   addToOutput("store i1 " + ans + ", i1* %" + getCurrentVarNum(init->ident_) + "\n");
-      // }
-
     }
+    if(auto struct_init = dynamic_cast<InitStruct*>(*i)) {
+      auto var_name = struct_init->ident_1;
+      auto struct_name = struct_init->ident_2;
+
+      current_var_number[var_name] = last_var_numbers[var_name] + 1;
+      last_var_numbers[var_name] += 1;
+
+      addToOutput("%" + getCurrentVarNum(var_name) + " = alloca %" + struct_name + "*\n");    
+      auto helper = NewStruct{dynamic_cast<IdentExpan*>(new IdentExpSimple(var_name)), struct_name};
+      helper.accept(this);
+    }
+    
   }
 
 }
 
 void LLVM::visitNewStruct(NewStruct *p) {
-  // Here identexpan_ is a id of a variable
-  // And ident_ is a name of the struct
-  // TODO
+  auto type = "%" + p->ident_ + "*";
+  auto type_no_star = "%" + p->ident_;
+
+  // This nifty little snippet will compute how much memory i need to alloc for my structures
+  addToOutput("%Size" + to_string(last_var + 1) + " = getelementptr " + type_no_star + ", " + type + " null, i32 1\n");
+  addToOutput("%Size_" + to_string(last_var + 1) + " = ptrtoint " + type + " %Size" + to_string(last_var + 1) + " to i32" + "\n");
+
+  auto size = "%Size_" + to_string(last_var + 1);
+
+  if(dynamic_cast<IdentExpSimple*>(p->identexpan_)) {
+    addToOutput("%i" + to_string(last_var + 1) + " = call i8* @malloc(i32 " + size + ")\n");
+    addToOutput("%i" + to_string(last_var + 2) + " = bitcast i8* %i" + to_string(last_var + 1) + " to " + type + "\n");
+    addToOutput("store " + type + " %i" + to_string(last_var + 2) + ", " + type + "* %" + getCurrentVarNum(*p->identexpan_) + "\n");
+
+    last_var += 2;
+  }
+  else {
+    p->identexpan_->accept(this);
+    //THIS WILL GET WEIRD
+    deleteLastLine();
+
+    addToOutput("%i" + to_string(last_var + 1) + " = call i8* @malloc(i32 " + size + ")\n");
+    addToOutput("%i" + to_string(last_var + 2) + " = bitcast i8* %i" + to_string(last_var + 1) + " to " + type + "\n");
+    addToOutput("store " + type + " %i" + to_string(last_var + 2) + ", " + type + "* %i" + to_string(last_var) + "\n");
+
+    last_var += 2;
+  }
+
 }
 
 String LLVM::processSingle(Expr* expr) {
@@ -407,10 +489,10 @@ String LLVM::processSingle(Expr* expr) {
     ans = "0";
     return ans;
   } 
-  // if(auto stmt = dynamic_cast<EString*>(expr)) {
-  //   ans = stmt->string_;
-  //   return ans;
-  // } 
+  if(auto stmt = dynamic_cast<ENullCast*>(expr)) {
+    ans = "null";
+    return ans;
+  } 
   
   expr->accept(this);
   if(auto stmt = dynamic_cast<EVar*>(expr)) {
@@ -433,36 +515,59 @@ void LLVM::visitAss(Ass *p)
 {
   auto ans = processSingle(p->expr_);
   auto type = cpp_to_llvm_types(p->expr_->expr_type_);
-  addToOutput("store " + type + " " + ans + ", " + type + "* %" + getCurrentVarNum(*p->identexpan_) + "\n");
-  // if(type == TYPE_STRING) 
-  //   addReference(ans);
+
+  if(dynamic_cast<IdentExpSimple*>(p->identexpan_)) 
+    addToOutput("store " + type + " " + ans + ", " + type + "* %" + getCurrentVarNum(*p->identexpan_) + "\n");
+  else {
+    p->identexpan_->accept(this);
+    deleteLastLine();
+    addToOutput("store " + type + " " + ans + ", " + type + "* %i" + to_string(last_var) + "\n");
+  }
 }
 
 void LLVM::visitIncr(Incr *p)
 {
-  addToOutput("%i" + to_string(last_var + 1) + " = load i32, i32* %" + getCurrentVarNum(*p->identexpan_) + "\n");
-  addToOutput("%i" + to_string(last_var + 2) + " = add i32 %i" + to_string(last_var + 1) + ", 1\n");
-  addToOutput("store i32 %i" + to_string(last_var + 2) + ", i32* %" + getCurrentVarNum(*p->identexpan_) + "\n");
+  auto var_clone = new EVar{p->identexpan_->clone()};
+  var_clone->expr_type_ = "int";
 
-  last_var += 2;
+  auto add = new EAdd{
+    var_clone,
+    new Plus{},
+    new ELitInt{1}
+  };
+  add->expr_type_ = "int";
+
+  auto tmp = new Ass{
+    p->identexpan_->clone(),
+    add 
+  };
+  tmp->accept(this);
+
 }
 
 void LLVM::visitDecr(Decr *p)
 {
-  addToOutput("%i" + to_string(last_var + 1) + " = load i32, i32* %" + getCurrentVarNum(*p->identexpan_) + "\n");
-  addToOutput("%i" + to_string(last_var + 2) + " = sub i32 %i" + to_string(last_var + 1) + ", 1\n");
-  addToOutput("store i32 %i" + to_string(last_var + 2) + ", i32* %" + getCurrentVarNum(*p->identexpan_) + "\n");
+  auto var_clone = new EVar{p->identexpan_->clone()};
+  var_clone->expr_type_ = "int";
 
-  last_var += 2;
+  auto add = new EAdd{
+    var_clone,
+    new Minus{},
+    new ELitInt{1}
+  };
+  add->expr_type_ = "int";
 
+  auto tmp = new Ass{
+    p->identexpan_->clone(),
+    add 
+  };
+  tmp->accept(this);
 }
 
 void LLVM::visitRet(Ret *p)
 {
   auto ans = processSingle(p->expr_);
   addToOutput("ret " + cpp_to_llvm_types(p->expr_->expr_type_) + " " + ans + "\n");
-  // if(cpp_to_llvm_types(p->expr_->expr_type_) == TYPE_STRING)
-  //   addReference(ans);
 
   skipping_instructions = true;
   // TODO
@@ -526,10 +631,7 @@ void LLVM::visitWhile(While *p)
   addToOutput(label_cond + ":\n");
 
   auto ans = processSingle(p->expr_); 
-  // p->expr_->accept(this);
 
-
-  // addToOutput("br i1 %i" + to_string(last_var) + ", label %"  + label_true + ", label %" + label_end + "\n");
   addToOutput("br i1 " + ans + ", label %"  + label_true + ", label %" + label_false + "\n");
 
   addToOutput(label_true + ":\n");
@@ -598,14 +700,23 @@ void LLVM::visitListType(ListType *listtype)
 void LLVM::visitExpr(Expr *p) {} //abstract class
 
 void LLVM::visitENullCast(ENullCast *p) {
-  //TODO
 }
 
 void LLVM::visitEVar(EVar *p)
 {
   auto type = cpp_to_llvm_types(p->expr_type_);
-  addToOutput("%i" + to_string(last_var + 1) + " = load " + type + ", " + type + "* %" + getCurrentVarNum(*p->identexpan_) + "\n");
-  last_var++;
+  if(dynamic_cast<IdentExpSimple*>(p->identexpan_)) {
+    addToOutput("%i" + to_string(last_var + 1) + " = load " + type + ", " + type + "* %" + getCurrentVarNum(*p->identexpan_) + "\n");
+    last_var++;
+  } 
+  else {
+    p->identexpan_->accept(this);
+    deleteLastLine();
+
+    addToOutput("%i" + to_string(last_var + 1) + " = load " + type + ", " + type + "* %i" + to_string(last_var) + "\n");
+    last_var++; 
+  }
+  
 }
 
 void LLVM::visitELitInt(ELitInt *p)
@@ -629,7 +740,6 @@ void LLVM::visitEApp(EApp *p)
     computed_args.push_back(processSingle(*i));
   }
 
-
   if(!dynamic_cast<Void*>(function_data[p->ident_].first)) {
     addToOutput("%i" + to_string(last_var + 1) + " = ");
     last_var++;
@@ -650,8 +760,6 @@ void LLVM::visitEApp(EApp *p)
 
 void LLVM::visitEString(EString *p)
 {
-  // addToOutput("%i" + to_string(last_var + 1) + " = call i8* @malloc(i32 " + to_string(p->string_.size()) + ")\n");
-
   addConstant(p->string_);
   
   int text_size = p->string_.size();
@@ -665,7 +773,7 @@ void LLVM::visitEString(EString *p)
 void LLVM::visitNeg(Neg *p)
 {
   auto ans = processSingle(p->expr_);
-  addToOutput("%i" + to_string(last_var + 1) + " = fneg i32 " + ans + "\n");
+  addToOutput("%i" + to_string(last_var + 1) + " = mul i32 " + ans + ", -1\n");
   last_var++;
 }
 

@@ -377,7 +377,9 @@ void IdentExpSimple::accept(Visitor *v)
 
 IdentExpSimple *IdentExpSimple::clone() const
 {
-  return new IdentExpSimple(*this);
+  IdentExpSimple* copy_ = new IdentExpSimple(*this);
+  copy_->my_type_ = this->my_type_; 
+  return copy_;
 }
 
 
