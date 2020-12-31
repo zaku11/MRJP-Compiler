@@ -131,7 +131,8 @@ string LLVM::genTmpVar(string text) {
 
 LLVM::LLVM(StructEnv strEnv, ClassEnv clEnv)
 {
-  this->env_of_structures = strEnv;
+  // TODO
+  // this->env_of_structures = strEnv;
   this->env_of_classes = clEnv;
 }
 
@@ -254,9 +255,8 @@ void LLVM::visitClassDefInherit(ClassDefInherit *p) {
     auto ident = mem.first;
     auto type = mem.second.first;
     auto number = mem.second.second;
-
     auto cl_type = "%" + p->ident_1;
-    addToOutput("%i" + to_string(last_var + 1) + " = getelementptr inbounds " + cl_type + ", " + cl_type + "* %self" + ", i32 0, i32 " + to_string(number) +"\n");
+    addToOutput("%i" + to_string(last_var + 1) + " = getelementptr inbounds " + cl_type + ", " + cl_type + "* %self, i32 0, i32 " + to_string(number) +"\n");
     if(type == LLVM_TYPE_INT) 
       addToOutput("store i32 0, i32* %i" + to_string(last_var + 1) + "\n");
     if(type == LLVM_TYPE_BOOL) 
@@ -272,8 +272,25 @@ void LLVM::visitClassDefInherit(ClassDefInherit *p) {
     } 
     last_var++;
   }
+  if(p->ident_2 != "") {
+    addToOutput("%father" + to_string(last_var + 1) + " = getelementptr inbounds %" + p->ident_1 + ", %" + p->ident_1 + "* %self, i32 0, i32 0\n");
+
+    addToOutput("%Size" + to_string(last_var + 1) + " = getelementptr %" + p->ident_2 + ", %" + p->ident_2 + "* null, i32 1\n");
+    addToOutput("%Size_" + to_string(last_var + 1) + " = ptrtoint %" + p->ident_2 + "* %Size" + to_string(last_var + 1) + " to i32" + "\n");
+    auto size = "%Size_" + to_string(last_var + 1);
+    addToOutput("%mem" + to_string(last_var + 1) + " = call i8* @malloc(i32 " + size + ")\n");
+    addToOutput("%casted" + to_string(last_var + 1) + " = bitcast i8* %mem" + to_string(last_var + 1) + " to %" + p->ident_2 + "*\n");
+    addToOutput("call void @" + p->ident_2 + "__reset" + "(%" + p->ident_2 + "* %casted" + to_string(last_var + 1) + ")\n");
+    addToOutput("store %" + p->ident_2 + "* %casted" + to_string(last_var + 1) + ", %" + p->ident_2 + "** %father" + to_string(last_var + 1) + "\n");
+
+    last_var++;
+  }
+
   addToOutput("ret void\n");
   addToOutput("}\n");
+
+
+  struct_data[p->ident_1] = fields;
 
   for (ListClassMember::const_iterator i = p->listclassmember_->begin() ; i != p->listclassmember_->end() ; ++i)
   {
@@ -284,13 +301,34 @@ void LLVM::visitClassDefInherit(ClassDefInherit *p) {
       auto block = fun_member->block_->clone();
       auto stmts = dynamic_cast<ListStmt*>(block);
 
-      for(auto mem : fields) {
-        auto ident = mem.first;
-        auto type = mem.second.first;
-        auto number = mem.second.second;
+      string current_class = p->ident_1;
+      while(current_class != "") {
+        for(auto mem : struct_data[current_class]) {
+          auto ident = mem.first;
+          auto type = mem.second.first;
+          auto number = mem.second.second;
 
-        auto cl_type = "%" + p->ident_1;
-        addToInject("%" + getCurrentVarNum(ident) + " = getelementptr inbounds " + cl_type + ", " + cl_type + "* %self" + ", i32 0, i32 " + to_string(number) +"\n");
+          if(current_class == p->ident_1)
+            addToInject("%" + getCurrentVarNum(ident) + " = getelementptr inbounds %" + current_class + ", %" + current_class + "* %self" + ", i32 0, i32 " + to_string(number) +"\n");
+          else 
+            addToInject("%" + getCurrentVarNum(ident) + " = getelementptr inbounds %" + current_class + ", %" + current_class + "* %self" + to_string(last_var) + ", i32 0, i32 " + to_string(number) +"\n");
+
+        }
+        auto next_class = env_of_classes[current_class].second;
+
+        if(next_class == "")
+          break;
+
+        if(current_class == p->ident_1)
+          addToInject("%selfPtr" + to_string(last_var + 1) + " = getelementptr inbounds %" + current_class + ", %" + current_class + "* %self" + ", i32 0, i32 0\n");
+        else 
+          addToInject("%selfPtr" + to_string(last_var + 1) + " = getelementptr inbounds %" + current_class + ", %" + current_class + "* %self" + to_string(last_var) + ", i32 0, i32 0\n");
+
+        addToInject("%self" + to_string(last_var + 1) + " = load %" + next_class + "*, %" + next_class + "** %selfPtr" + to_string(last_var + 1) + "\n");
+      
+        last_var++;
+
+        current_class = next_class;
       }
 
       string mangled_name = p->ident_1 + "_" + fun_member->ident_;
@@ -302,8 +340,6 @@ void LLVM::visitClassDefInherit(ClassDefInherit *p) {
     }
   }
 
-
-  struct_data[p->ident_1] = fields;
 
 }
 
@@ -340,8 +376,21 @@ void LLVM::visitIdentExpan(IdentExpan *p) {} /* abstract class */
 
 void LLVM::visitIdentExp(IdentExp *p) {
   if(p->identexpan_) {
-
       p->identexpan_->accept(this);
+
+      string current_class = current_exp_type;
+      while(struct_data[current_class].find(p->ident_) == struct_data[current_class].end()) {
+        auto next_class = env_of_classes[current_class].second;
+
+        addToOutput("%i_helper" + to_string(last_var + 1) + " = getelementptr inbounds %" + current_class + ", %" + current_class + "* %i" + to_string(last_var) + ", i32 0, i32 0\n");
+        addToOutput("%i" + to_string(last_var + 1) + " = load %" + next_class + "*, %" + next_class + "** %i_helper" + to_string(last_var + 1) + "\n");
+
+        cerr << "I need to go up, didn't find a member in " << current_class << "\n";
+        current_class = next_class;
+        last_var++;
+      }
+      current_exp_type = current_class;
+
       auto next_type = struct_data[current_exp_type][p->ident_].first;
 
       addToOutput("%i" + to_string(last_var + 1) + " = getelementptr inbounds %" + current_exp_type + ", %" + current_exp_type + "* %i" + to_string(last_var) + ", i32 0, i32 " + to_string(struct_data[current_exp_type][p->ident_].second) +"\n");
@@ -357,11 +406,10 @@ void LLVM::visitIdentExp(IdentExp *p) {
 
 void LLVM::visitIdentExpSimple(IdentExpSimple *p) {
   current_exp_type = p->my_type_;
-
+  
   addToOutput("%i" + to_string(last_var + 1) + " = load %" + current_exp_type + "*, %" + current_exp_type + "** %" + getCurrentVarNum(p->ident_) + "\n");
   last_var++;
 
-  // last_var++;
 }
 
 
@@ -819,9 +867,28 @@ void LLVM::visitEApp(EApp *p)
     }
     addToOutput(")\n");
   }
+
+
   if(auto complex = dynamic_cast<IdentExp*>(p->identexpan_)) {
     complex->identexpan_->accept(this);
-    string ans = "%i" + to_string(last_var);
+
+    string current_class = current_exp_type;
+    cerr << "We have now " << current_class << " looking for method " << complex->ident_ << "\n";
+    for(auto fun : env_of_classes[current_class].first) {
+      cerr << fun.first << "\n";
+    }
+
+    while(env_of_classes[current_class].first.find(complex->ident_) == env_of_classes[current_class].first.end()) {
+      auto next_class = env_of_classes[current_class].second;
+
+      addToOutput("%i_helper" + to_string(last_var + 1) + " = getelementptr inbounds %" + current_class + ", %" + current_class + "* %i" + to_string(last_var) + ", i32 0, i32 0\n");
+      addToOutput("%i" + to_string(last_var + 1) + " = load %" + next_class + "*, %" + next_class + "** %i_helper" + to_string(last_var + 1) + "\n");
+
+      current_class = next_class;
+      last_var++;
+    }
+    current_exp_type = current_class;
+    auto ans = "%i" + to_string(last_var);
     auto fn_name = current_exp_type + "_" + complex->ident_;
 
     vector <string> computed_args;
@@ -830,12 +897,15 @@ void LLVM::visitEApp(EApp *p)
       computed_args.push_back(processSingle(*i));
     }
 
+
     if(!dynamic_cast<Void*>(function_data[fn_name].first)) {
       addToOutput("%i" + to_string(last_var + 1) + " = ");
       last_var++;
     }
-    vector<Type*> listarg = function_data[fn_name].second;
+
+
     addToOutput("call " + transform_type_name(*function_data[fn_name].first) + " @" + fn_name + "(%" + current_exp_type + "* " + ans);
+    vector<Type*> listarg = function_data[fn_name].second;
     for (int i = 0 ; i < listarg.size() ; ++i)
     {
       // if(i > 0) 

@@ -230,8 +230,13 @@ void StaticAnalyzer::visitClassDefInherit(ClassDefInherit *p) {
 
       auto tmp_env_of_vars = env_of_vars;
 
-      for(auto mem : env_of_structures[p->ident_1]) {
-        env_of_vars[mem.first] = mem.second;
+      string current_class = p->ident_1;
+      while(current_class != "") {
+        for(auto mem : env_of_structures[current_class]) {
+          if(env_of_vars.find(mem.first) == env_of_vars.end())
+            env_of_vars[mem.first] = mem.second;
+        }
+        current_class = env_of_classes[current_class].second;
       }
       env_of_vars["self"] = p->ident_1;
 
@@ -471,7 +476,7 @@ void StaticAnalyzer::visitDecl(Decl *p)
           fail(init->ident_1 + " was declared as a " + get_type(p->type_) + " but was assigned a new " + init->ident_2 + "\n", init);
         
         defined_in_current_scope.insert(init->ident_1);
-        env_of_vars[init->ident_1] = get_type(p->type_);
+        env_of_vars[init->ident_1] = init->ident_2;
       }
     }
   }
