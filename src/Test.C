@@ -55,12 +55,12 @@ int main(int argc, char ** argv)
     try {
       p->analyze(parse_tree);
       std::cerr << "OK\n";
-      LLVM *llvm = new LLVM();
+      LLVM *llvm = new LLVM(p->env_of_structures, p->env_of_classes);
       llvm->run(parse_tree);
       exit(0);
     }
     catch(front_end_exception &e) {
-      std::cerr << "ERROR\n";
+      std :: cerr << "ERROR\n";
       PrintAbsyn *p2 = new PrintAbsyn(e.msg, e.erronous_statement);
       std :: cerr << p2->print(parse_tree) << "\n";
       exit(-1);

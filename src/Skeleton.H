@@ -10,7 +10,7 @@ class Skeleton : public Visitor
 public:
   void visitProgram(Program *p);
   void visitTopDef(TopDef *p);
-  void visitStructMember(StructMember *p);
+  void visitClassMember(ClassMember *p);
   void visitIdentExpan(IdentExpan *p);
   void visitArg(Arg *p);
   void visitBlock(Block *p);
@@ -23,10 +23,11 @@ public:
   void visitRelOp(RelOp *p);
   void visitProgramDef(ProgramDef *p);
   void visitFnDef(FnDef *p);
-  void visitStructMemNoInit(StructMemNoInit *p);
-  void visitStructMemInit(StructMemInit *p);
-  void visitStructDef(StructDef *p);
-  void visitEmptyStructDef(EmptyStructDef *p);
+  void visitClassMem(ClassMem *p);
+  void visitClassFun(ClassFun *p);
+  void visitClassDefNoInherit(ClassDefNoInherit *p);
+  void visitClassDefInherit(ClassDefInherit *p);
+  void visitEmptyClassDef(EmptyClassDef *p);
   void visitIdentExp(IdentExp *p);
   void visitIdentExpSimple(IdentExpSimple *p);
   void visitArgDef(ArgDef *p);
@@ -36,9 +37,9 @@ public:
   void visitDecl(Decl *p);
   void visitNoInit(NoInit *p);
   void visitInit(Init *p);
-  void visitInitStruct(InitStruct *p);
+  void visitInitClass(InitClass *p);
   void visitAss(Ass *p);
-  void visitNewStruct(NewStruct *p);
+  void visitNewClass(NewClass *p);
   void visitIncr(Incr *p);
   void visitDecr(Decr *p);
   void visitRet(Ret *p);
@@ -51,7 +52,7 @@ public:
   void visitStr(Str *p);
   void visitBool(Bool *p);
   void visitVoid(Void *p);
-  void visitStruct(Struct *p);
+  void visitClass(Class *p);
   void visitFun(Fun *p);
   void visitENullCast(ENullCast *p);
   void visitEVar(EVar *p);
@@ -78,7 +79,7 @@ public:
   void visitGE(GE *p);
   void visitEQU(EQU *p);
   void visitNE(NE *p);
-  void visitListStructMember(ListStructMember *p);
+  void visitListClassMember(ListClassMember *p);
   void visitListTopDef(ListTopDef *p);
   void visitListArg(ListArg *p);
   void visitListStmt(ListStmt *p);

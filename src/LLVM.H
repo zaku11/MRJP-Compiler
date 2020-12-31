@@ -10,6 +10,7 @@
 #include <set>
 #include <vector>
 #include <exception>
+#include "FrontEnd.H"
 
 using std :: string;
 using std :: set;
@@ -23,10 +24,6 @@ protected:
   int last_var = 1;
   int last_label_num = 0;
 
-  // Type* current_return_type;
-  
-  // map<Ident, Type*> var_types;
-  // string last_evaluated_expr_type;
   bool skipping_instructions = false;
   map<Ident, int> current_var_number;
   map<Ident, int> last_var_numbers;
@@ -35,28 +32,25 @@ protected:
   // This maps a struct name into a map (member_name -> (member_type, his number))
   map<Ident, map <string, pair<string, int> > > struct_data;
 
+  StructEnv env_of_structures;
+  ClassEnv env_of_classes;
+
   string current_exp_type;
-  string last_expr_chain;
-  // string label_true;
-  // string label_false;
 
 public:
   string output;
+  string inject;
 
-  LLVM(void);
+  LLVM(StructEnv, ClassEnv);
   ~LLVM(void);
-  // void allocAndStore(Ident id);
   void deleteLastLine();
   void addToOutput(string text);
   void addConstant(string text);
-  void addReference(string id);
-  void deleteReference(string id);
   bool doesEndWithReturn();
-  map <string, int> reference_map;
-  vector <string> new_things_added;
-  // bool isLabelLast();
-  // bool isFnEmpty();
 
+  void addToInject(string text);
+  void prependInject(string text);
+  
   void run(Visitable *v);
   void run_with_rollback(Visitable* v);
   string getCurrentVarNum(Ident id);
@@ -69,13 +63,14 @@ public:
   void visitTopDef(TopDef *p); /* abstract class */
   void visitFnDef(FnDef *p);
 
-  void visitStructDef(StructDef *p);
-  void visitEmptyStructDef(EmptyStructDef *p);
+  void visitClassDefNoInherit(ClassDefNoInherit *p);
+  void visitClassDefInherit(ClassDefInherit *p);
+  void visitEmptyClassDef(EmptyClassDef *p);
+  void visitClassMember(ClassMember *p); /* abstract class */
+  void visitClassMem(ClassMem *p);
+  void visitClassFun(ClassFun *p);
+  void visitListClassMember(ListClassMember *p);
 
-  void visitStructMember(StructMember *p); /* abstract class */
-  void visitStructMemNoInit(StructMemNoInit *p);
-  void visitStructMemInit(StructMemInit *p);
-  void visitListStructMember(ListStructMember *p);
   void visitIdentExpan(IdentExpan *p); /* abstract class */
   void visitIdentExp(IdentExp *p);
   void visitIdentExpSimple(IdentExpSimple *p);
@@ -92,7 +87,7 @@ public:
   void visitBStmt(BStmt *p);
   void visitDecl(Decl *p);
   void visitAss(Ass *p);
-  void visitNewStruct(NewStruct *p);
+  void visitNewClass(NewClass *p);
   void visitIncr(Incr *p);
   void visitDecr(Decr *p);
   void visitRet(Ret *p);
@@ -107,11 +102,11 @@ public:
   void visitListItem(ListItem *p);
   void visitType(Type *p); /* abstract class */
   void visitInt(Int *p);
-  void visitInitStruct(InitStruct *p);
+  void visitInitClass(InitClass *p);
   void visitStr(Str *p);
   void visitBool(Bool *p);
   void visitVoid(Void *p);
-  void visitStruct(Struct *p);
+  void visitClass(Class *p);
   void visitFun(Fun *p);
   void visitListType(ListType *p);
 

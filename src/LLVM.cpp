@@ -15,10 +15,10 @@ using std :: set;
 using std :: map;
 using std :: to_string;
 
-const String TYPE_INT = "i32";
-const String TYPE_BOOL = "i1";
-const String TYPE_STRING = "i8*";
-const String TYPE_VOID = "void";
+const String LLVM_TYPE_INT = "i32";
+const String LLVM_TYPE_BOOL = "i1";
+const String LLVM_TYPE_STRING = "i8*";
+const String LLVM_TYPE_VOID = "void";
 
 void LLVM::deleteLastLine() {
   int ptr = output.size() - 2;
@@ -34,7 +34,7 @@ string transform_type_name(Type &type) {
   if(dynamic_cast<Bool*>(&type)) return "i1";
   if(dynamic_cast<Str*>(&type)) return "i8*";
   if(dynamic_cast<Void*>(&type)) return "void";
-  if(auto str = dynamic_cast<Struct*>(&type))
+  if(auto str = dynamic_cast<Class*>(&type))
     return "%" + str->ident_ + "*";
   return "";
 }
@@ -81,20 +81,9 @@ void LLVM::addConstant(string text) {
   // cerr << text_escaped << "\n";
   auto type = "[" + to_string(text.size() + 1) + " x i8]";
 
-  string full_message = "@s" + to_string(last_var + 1) + " = private constant " + type + " c\"" + text_escaped + "\\00\" \n";
+  string full_message = "@s" + to_string(last_var + 1) + " = internal constant " + type + " c\"" + text_escaped + "\\00\" \n";
   this->output = full_message + output;
 
-}
-
-void LLVM::addReference(string id) {
-  reference_map[id]++;
-}
-
-void LLVM::deleteReference(string id) {
-  reference_map[id]--;
-  if(reference_map[id] == 0) {
-    addToOutput("call void @free(i8* " + id + ")\n");
-  }
 }
 
 bool LLVM::doesEndWithReturn() {
@@ -108,6 +97,13 @@ bool LLVM::doesEndWithReturn() {
   return output.compare(ptr, 3, "ret") == 0;
 }
 
+void LLVM::addToInject(string text) {
+  inject += text;
+}
+
+void LLVM::prependInject(string text) {
+  inject = text + inject;
+}
 
 string LLVM::getCurrentVarNum(Ident id) {
   return "_" + id + "_" + to_string(current_var_number[id]);
@@ -133,8 +129,10 @@ string LLVM::genTmpVar(string text) {
 
 
 
-LLVM::LLVM(void)
+LLVM::LLVM(StructEnv strEnv, ClassEnv clEnv)
 {
+  this->env_of_structures = strEnv;
+  this->env_of_classes = clEnv;
 }
 
 LLVM::~LLVM(void)
@@ -187,6 +185,12 @@ void LLVM::visitFnDef(FnDef *p)
   p->listarg_->accept(this);
   addToOutput(" {\n");
 
+  if(inject != "") {
+    addToOutput(inject);
+    inject = "";
+  }
+
+
   for (ListArg::const_iterator i = p->listarg_->begin() ; i != p->listarg_->end() ; ++i)
   {
     if(auto arg = dynamic_cast<ArgDef*>(*i)) {
@@ -209,7 +213,7 @@ void LLVM::visitFnDef(FnDef *p)
     if(type == "i1") 
       addToOutput("ret i1 0\n");
     if(type == "i8*") {
-      addToOutput("%tmp" + to_string(last_var + 1) + " = bitcast [0 x i8]* @emptyStr to i8*\n");
+      addToOutput("%tmp" + to_string(last_var + 1) + " = bitcast [1 x i8]* @emptyStr to i8*\n");
       addToOutput("ret i8* %tmp" + to_string(last_var + 1));
       last_var++; 
     }
@@ -220,50 +224,117 @@ void LLVM::visitFnDef(FnDef *p)
   addToOutput("}\n");
 }
 
-void LLVM::visitStructDef(StructDef *p) {
-  addToOutput("%" + p->ident_ + " = type {\n");
+void LLVM::visitClassDefInherit(ClassDefInherit *p) {
+  addToOutput("%" + p->ident_1 + " = type {\n");
   map <string, pair<string, int> > fields;
   int iter = 0;
-  for (ListStructMember::const_iterator i = p->liststructmember_->begin() ; i != p->liststructmember_->end() ; ++i)
+  if(p->ident_2 != "") {
+    addToOutput("%" + p->ident_2 + "*");
+    iter++;
+  }
+
+  for (ListClassMember::const_iterator i = p->listclassmember_->begin() ; i != p->listclassmember_->end() ; ++i)
   {
-    if(iter != 0) {
-      addToOutput(",\n");
-    }
-    if(auto no_init = dynamic_cast<StructMemNoInit*>(*i)) {
+    if(auto no_init = dynamic_cast<ClassMem*>(*i)) {
+      if(iter != 0) {
+        addToOutput(", ");
+      }
       auto type_name = transform_type_name(*no_init->type_); 
       addToOutput(type_name);
       if(type_name[0] == '%') {
         type_name = type_name.substr(1, type_name.size() - 2);
       }
       fields[no_init->ident_] = std :: make_pair(type_name, iter);
+      iter++;
     }
-    iter++;
   }
   addToOutput("\n}\n");
-  struct_data[p->ident_] = fields;
+  addToOutput("define void @" + p->ident_1 + "__reset(%" + p->ident_1 + "* %self) {\n");
+  for(auto mem : fields) {
+    auto ident = mem.first;
+    auto type = mem.second.first;
+    auto number = mem.second.second;
+
+    auto cl_type = "%" + p->ident_1;
+    addToOutput("%i" + to_string(last_var + 1) + " = getelementptr inbounds " + cl_type + ", " + cl_type + "* %self" + ", i32 0, i32 " + to_string(number) +"\n");
+    if(type == LLVM_TYPE_INT) 
+      addToOutput("store i32 0, i32* %i" + to_string(last_var + 1) + "\n");
+    if(type == LLVM_TYPE_BOOL) 
+      addToOutput("store i1 0, i1* %i" + to_string(last_var + 1) + "\n");
+    if(type == LLVM_TYPE_STRING) {
+      addToOutput("%i" + to_string(last_var + 2) + " = bitcast [1 x i8]* @emptyStr to i8*\n");
+      addToOutput("store i8* %i" + to_string(last_var + 2) +  ", i8** %i" + to_string(last_var + 1)+ "\n");
+      last_var++;
+    }
+    if(type != LLVM_TYPE_BOOL && type != LLVM_TYPE_INT && type != LLVM_TYPE_STRING) {
+      auto real_type = "%" + type + "*";
+      addToOutput("store " + real_type + " null, " + real_type +  "* %i" + to_string(last_var + 1) + "\n");
+    } 
+    last_var++;
+  }
+  addToOutput("ret void\n");
+  addToOutput("}\n");
+
+  for (ListClassMember::const_iterator i = p->listclassmember_->begin() ; i != p->listclassmember_->end() ; ++i)
+  {
+    if(auto fun_member = dynamic_cast<ClassFun*>(*i)) {
+      auto args = fun_member->listarg_->clone();
+      args->insert(args->begin(), new ArgDef{new Class(p->ident_1), "self"});
+
+      auto block = fun_member->block_->clone();
+      auto stmts = dynamic_cast<ListStmt*>(block);
+
+      for(auto mem : fields) {
+        auto ident = mem.first;
+        auto type = mem.second.first;
+        auto number = mem.second.second;
+
+        auto cl_type = "%" + p->ident_1;
+        addToInject("%" + getCurrentVarNum(ident) + " = getelementptr inbounds " + cl_type + ", " + cl_type + "* %self" + ", i32 0, i32 " + to_string(number) +"\n");
+      }
+
+      string mangled_name = p->ident_1 + "_" + fun_member->ident_;
+      FnDef* tmp_fun = new FnDef{fun_member->type_->clone(), mangled_name, args, fun_member->block_->clone()};
+
+      function_data[mangled_name] = make_pair(fun_member->type_, extract_types_from_args(fun_member->listarg_));
+
+      tmp_fun->accept(this);
+    }
+  }
+
+
+  struct_data[p->ident_1] = fields;
 
 }
 
-void LLVM::visitEmptyStructDef(EmptyStructDef *p) {
+void LLVM::visitClassDefNoInherit(ClassDefNoInherit *p) {
+  ClassDefInherit* cpy = new ClassDefInherit{p->ident_, "", p->listclassmember_->clone()};
+  cpy->accept(this);
+}
+
+void LLVM::visitEmptyClassDef(EmptyClassDef *p) {
   addToOutput("%" + p->ident_ + " = type {}\n");
   map <string, pair<string, int> > fields;
   struct_data[p->ident_] = fields;
 }
 
 
-void LLVM::visitStructMember(StructMember *p) {} //abstract class
+void LLVM::visitClassMember(ClassMember *p) {
 
-void LLVM::visitStructMemNoInit(StructMemNoInit *p)
-{
 }
 
-void LLVM::visitStructMemInit(StructMemInit *p)
-{
+void LLVM::visitClassMem(ClassMem *p) {
+
 }
 
-void LLVM::visitListStructMember(ListStructMember *liststructmember)
-{
+void LLVM::visitClassFun(ClassFun *p) {
+
 }
+
+void LLVM::visitListClassMember(ListClassMember *p) {
+
+}
+
 
 void LLVM::visitIdentExpan(IdentExpan *p) {} /* abstract class */
 
@@ -271,13 +342,14 @@ void LLVM::visitIdentExp(IdentExp *p) {
   if(p->identexpan_) {
 
       p->identexpan_->accept(this);
+      auto next_type = struct_data[current_exp_type][p->ident_].first;
 
       addToOutput("%i" + to_string(last_var + 1) + " = getelementptr inbounds %" + current_exp_type + ", %" + current_exp_type + "* %i" + to_string(last_var) + ", i32 0, i32 " + to_string(struct_data[current_exp_type][p->ident_].second) +"\n");
 
-      addToOutput("%i" + to_string(last_var + 2) + " = load %" + current_exp_type + "*, %" + current_exp_type + "** %i" + to_string(last_var + 1) + "\n");
+      addToOutput("%i" + to_string(last_var + 2) + " = load %" + next_type + "*, %" + next_type + "** %i" + to_string(last_var + 1) + "\n");
       last_var += 2;
 
-      current_exp_type = struct_data[current_exp_type][p->ident_].first;
+      current_exp_type = next_type;
   }
   
   // TODO
@@ -296,7 +368,7 @@ void LLVM::visitIdentExpSimple(IdentExpSimple *p) {
 
 void LLVM::visitListTopDef(ListTopDef *listtopdef)
 {
-  addToOutput("@emptyStr = internal constant [0 x i8] c\"\"\n");
+  addToOutput("@emptyStr = internal constant [1 x i8] c\"\\00\"\n");
   addToOutput("declare void @free(i8*)\n");
   addToOutput("declare i8* @concat(i8*, i8*)\n");
   addToOutput("declare i8* @malloc(i32)\n");
@@ -311,11 +383,16 @@ void LLVM::visitListTopDef(ListTopDef *listtopdef)
     if(auto fn_def = dynamic_cast<FnDef*>(*i)) {
       function_data[fn_def->ident_] = make_pair(fn_def->type_, extract_types_from_args(fn_def->listarg_));
     }
+    if(auto new_class = dynamic_cast<ClassDefNoInherit*>(*i)) 
+      new_class->accept(this);
+    if(auto new_class = dynamic_cast<ClassDefInherit*>(*i)) 
+      new_class->accept(this);
   }
 
   for (ListTopDef::const_iterator i = listtopdef->begin() ; i != listtopdef->end() ; ++i)
   {
-    (*i)->accept(this);
+    if(!dynamic_cast<ClassDefNoInherit*>(*i) && !dynamic_cast<ClassDefInherit*>(*i) ) 
+      (*i)->accept(this);
   }
 
 }
@@ -347,17 +424,7 @@ void LLVM::visitBlock(Block *p) {} //abstract class
 void LLVM::visitBlockDef(BlockDef *p)
 {
   if(p->liststmt_) {
-    // auto rollback_new_things_added = new_things_added;
-    // new_things_added.clear();
-
     run_with_rollback(p->liststmt_);
-    
-    // for(auto thing : new_things_added) {
-    //   deleteReference(thing);
-    // }
-
-    // new_things_added = rollback_new_things_added;
-
   }
 }
 
@@ -408,7 +475,7 @@ void LLVM::visitDecl(Decl *p)
       }
       if(dynamic_cast<Str*>(p->type_)) {
         addToOutput("%" + getCurrentVarNum(no_init->ident_) + " = alloca i8*\n");
-        addToOutput("%i" + to_string(last_var + 1) + " = bitcast [0 x i8]* @emptyStr to i8*\n");
+        addToOutput("%i" + to_string(last_var + 1) + " = bitcast [1 x i8]* @emptyStr to i8*\n");
         addToOutput("store i8* %i" + to_string(last_var + 1) +  ", i8** %" + getCurrentVarNum(no_init->ident_) + "\n");
         last_var++;
         continue;
@@ -428,7 +495,7 @@ void LLVM::visitDecl(Decl *p)
       addToOutput("%" + getCurrentVarNum(init->ident_) + " = alloca " + type + "\n");
       addToOutput("store " + type + " " + ans + ", " + type + "* %" + getCurrentVarNum(init->ident_) + "\n");
     }
-    if(auto struct_init = dynamic_cast<InitStruct*>(*i)) {
+    if(auto struct_init = dynamic_cast<InitClass*>(*i)) {
       auto var_name = struct_init->ident_1;
       auto struct_name = struct_init->ident_2;
 
@@ -436,7 +503,7 @@ void LLVM::visitDecl(Decl *p)
       last_var_numbers[var_name] += 1;
 
       addToOutput("%" + getCurrentVarNum(var_name) + " = alloca %" + struct_name + "*\n");    
-      auto helper = NewStruct{dynamic_cast<IdentExpan*>(new IdentExpSimple(var_name)), struct_name};
+      auto helper = NewClass{dynamic_cast<IdentExpan*>(new IdentExpSimple(var_name)), struct_name};
       helper.accept(this);
     }
     
@@ -444,7 +511,7 @@ void LLVM::visitDecl(Decl *p)
 
 }
 
-void LLVM::visitNewStruct(NewStruct *p) {
+void LLVM::visitNewClass(NewClass *p) {
   auto type = "%" + p->ident_ + "*";
   auto type_no_star = "%" + p->ident_;
 
@@ -457,6 +524,7 @@ void LLVM::visitNewStruct(NewStruct *p) {
   if(dynamic_cast<IdentExpSimple*>(p->identexpan_)) {
     addToOutput("%i" + to_string(last_var + 1) + " = call i8* @malloc(i32 " + size + ")\n");
     addToOutput("%i" + to_string(last_var + 2) + " = bitcast i8* %i" + to_string(last_var + 1) + " to " + type + "\n");
+    addToOutput("call void @" + p->ident_ + "__reset" + "(" + type + " %i" + to_string(last_var + 2) + ")\n");
     addToOutput("store " + type + " %i" + to_string(last_var + 2) + ", " + type + "* %" + getCurrentVarNum(*p->identexpan_) + "\n");
 
     last_var += 2;
@@ -468,6 +536,7 @@ void LLVM::visitNewStruct(NewStruct *p) {
 
     addToOutput("%i" + to_string(last_var + 1) + " = call i8* @malloc(i32 " + size + ")\n");
     addToOutput("%i" + to_string(last_var + 2) + " = bitcast i8* %i" + to_string(last_var + 1) + " to " + type + "\n");
+    addToOutput("call void @" + p->ident_ + "__reset" + "(" + type + " %i" + to_string(last_var + 2) + ")\n");
     addToOutput("store " + type + " %i" + to_string(last_var + 2) + ", " + type + "* %i" + to_string(last_var) + "\n");
 
     last_var += 2;
@@ -570,14 +639,12 @@ void LLVM::visitRet(Ret *p)
   addToOutput("ret " + cpp_to_llvm_types(p->expr_->expr_type_) + " " + ans + "\n");
 
   skipping_instructions = true;
-  // TODO
 }
 
 void LLVM::visitVRet(VRet *p)
 {
   addToOutput("ret void\n");
   skipping_instructions = true;
-  // TODO
 }
 
 void LLVM::visitCond(Cond *p)
@@ -655,7 +722,7 @@ void LLVM::visitNoInit(NoInit *p)
 {  
 }
 
-void LLVM::visitInitStruct(InitStruct *p) {
+void LLVM::visitInitClass(InitClass *p) {
 
 }
 
@@ -685,7 +752,7 @@ void LLVM::visitVoid(Void *p)
 {
 }
 
-void LLVM::visitStruct(Struct *p)
+void LLVM::visitClass(Class *p)
 {
 }
 
@@ -733,28 +800,52 @@ void LLVM::visitELitFalse(ELitFalse *p)
 
 void LLVM::visitEApp(EApp *p)
 {
+  if(auto simple = dynamic_cast<IdentExpSimple*>(p->identexpan_)) {
+    vector <string> computed_args;
+    for (ListExpr::const_iterator i = p->listexpr_->begin() ; i != p->listexpr_->end() ; ++i)
+    {
+      computed_args.push_back(processSingle(*i));
+    }
+    if(!dynamic_cast<Void*>(function_data[simple->ident_].first)) {
+      addToOutput("%i" + to_string(last_var + 1) + " = ");
+      last_var++;
+    }
+    vector<Type*> listarg = function_data[simple->ident_].second;
+    addToOutput("call " + transform_type_name(*function_data[simple->ident_].first) + " @" + simple->ident_ + "(");
+    for (int i = 0 ; i < listarg.size() ; ++i)
+    {
+      if(i > 0) addToOutput(", ");
+      addToOutput(transform_type_name(*listarg[i]) + " " + computed_args[i]);
+    }
+    addToOutput(")\n");
+  }
+  if(auto complex = dynamic_cast<IdentExp*>(p->identexpan_)) {
+    complex->identexpan_->accept(this);
+    string ans = "%i" + to_string(last_var);
+    auto fn_name = current_exp_type + "_" + complex->ident_;
 
-  vector <string> computed_args;
-  for (ListExpr::const_iterator i = p->listexpr_->begin() ; i != p->listexpr_->end() ; ++i)
-  {
-    computed_args.push_back(processSingle(*i));
+    vector <string> computed_args;
+    for (ListExpr::const_iterator i = p->listexpr_->begin() ; i != p->listexpr_->end() ; ++i)
+    {
+      computed_args.push_back(processSingle(*i));
+    }
+
+    if(!dynamic_cast<Void*>(function_data[fn_name].first)) {
+      addToOutput("%i" + to_string(last_var + 1) + " = ");
+      last_var++;
+    }
+    vector<Type*> listarg = function_data[fn_name].second;
+    addToOutput("call " + transform_type_name(*function_data[fn_name].first) + " @" + fn_name + "(%" + current_exp_type + "* " + ans);
+    for (int i = 0 ; i < listarg.size() ; ++i)
+    {
+      // if(i > 0) 
+      addToOutput(", ");
+      addToOutput(transform_type_name(*listarg[i]) + " " + computed_args[i]);
+    }
+    addToOutput(")\n");
   }
 
-  if(!dynamic_cast<Void*>(function_data[p->ident_].first)) {
-    addToOutput("%i" + to_string(last_var + 1) + " = ");
-    last_var++;
-  }
 
-  vector<Type*> listarg = function_data[p->ident_].second;
-  addToOutput("call " + transform_type_name(*function_data[p->ident_].first) + " @" + p->ident_ + "(");
-  for (int i = 0 ; i < listarg.size() ; ++i)
-  {
-    if(i > 0) addToOutput(", ");
-    addToOutput(transform_type_name(*listarg[i]) + " " + computed_args[i]);
-  }
-
-
-  addToOutput(")\n");
 
 }
 
@@ -810,11 +901,9 @@ void LLVM::visitEAdd(EAdd *p)
   auto res = process(p->expr_1, p->expr_2);
   String s1 = res.first, s2 = res.second;
   if(dynamic_cast<Plus*>(p->addop_)) {
-    if(cpp_to_llvm_types(p->expr_1->expr_type_) == TYPE_STRING) {
+    if(cpp_to_llvm_types(p->expr_1->expr_type_) == LLVM_TYPE_STRING) {
       string new_malloced_thing = "%i" + to_string(last_var + 1);
       addToOutput(new_malloced_thing + " = call i8* @concat(i8* " + s1 + ", i8* " + s2 + ")\n");
-      // new_things_added.push_back(new_malloced_thing);
-      // addReference(new_malloced_thing);
     } else {
       addToOutput("%i" + to_string(last_var + 1) + " = add " + cpp_to_llvm_types(p->expr_1->expr_type_) + " " + s1 + ", " + s2 + "\n");
     }

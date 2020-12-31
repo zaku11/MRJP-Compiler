@@ -5,14 +5,17 @@
 #include <set>
 #include <algorithm>
 #include "FrontEnd.H"
+#include <optional>
 
 using std :: cerr;
 using std :: vector;
 using std :: string;
+using std :: pair;
 using std :: set;
 using std :: map;
 using std :: to_string;
 using std :: get_if;
+using std :: optional;
 
 
 TYPE get_type(Type* val) {
@@ -24,7 +27,7 @@ TYPE get_type(Type* val) {
     return TYPE_BOOLEAN;
   if(dynamic_cast<Void*>(val))
     return TYPE_VOID;
-  if(auto str = dynamic_cast<Struct*>(val))
+  if(auto str = dynamic_cast<Class*>(val))
     return str->ident_;
   
   return "";
@@ -71,11 +74,53 @@ void check_for_type_matching(TYPE type1, TYPE type2, Visitable *v) {
     fail("got type " + type2 + " but expected " + type1 + "\n", v);
 }
 
+
+bool is_an_ancestor_type(Ident son, Ident father, ClassEnv& class_env) {
+  while(son != "") {
+    if(son == father)
+      return true;
+  
+    son = class_env[son].second;
+  }
+  return false;
+}
+
+optional<FunctionType> is_there_a_function(Ident el, Ident function, ClassEnv& class_env) {
+  while(el != "") {
+    if(class_env[el].first.find(function) != class_env[el].first.end())
+      return class_env[el].first[function];
+    el = class_env[el].second;
+  }
+  return {};
+}
+
+optional<TYPE> is_there_a_member(Ident el, Ident member, StructEnv& struct_env, ClassEnv& class_env) {
+  while(el != "") {
+    if(struct_env[el].find(member) != struct_env[el].end())
+      return struct_env[el][member];
+    el = class_env[el].second;
+  }
+  return {};
+}
+
+
+void check_for_type_matching(TYPE type1, TYPE type2, ClassEnv &env_of_classes, Visitable *v) {
+  if(type1 != type2 && !is_an_ancestor_type(type2, type1, env_of_classes)) 
+    fail("got type " + type2 + " but expected " + type1 + "\n", v);
+}
+
 void same_scope_redefinition(Ident ident, set<Ident> *defined_in_current_scope, Visitable* v) {
   if(defined_in_current_scope->find(ident) != defined_in_current_scope->end())
     fail("variable " + ident + " got redefined in this same scope\n", v);
 }
 
+string identExpToString(IdentExpan& id) {
+  if(auto simple = dynamic_cast<IdentExpSimple*>(&id))
+    return simple->ident_;
+  if(auto complex = dynamic_cast<IdentExp*>(&id)) 
+    return complex->ident_ + "." + identExpToString(*complex->identexpan_);
+  return "";
+}
 
 StaticAnalyzer::StaticAnalyzer(void)
 {
@@ -133,58 +178,91 @@ void StaticAnalyzer::visitFnDef(FnDef *p)
   env_of_vars = tmp_env_of_vars;
 }
 
-void StaticAnalyzer::visitStructDef(StructDef *p) {
-  if(is_a_basic_type(p->ident_)) {
-    fail("you can't have " + p->ident_ + " as a struct name\n", p);
-  }
+
+ClassDefInherit* port(ClassDefNoInherit* class_def) {
+  ClassDefInherit* cpy = new ClassDefInherit{class_def->ident_, "", class_def->listclassmember_->clone()};
+  return cpy;
+}
+
+
+void StaticAnalyzer::visitClassDefNoInherit(ClassDefNoInherit *p) {
+  port(p)->accept(this);
+}
+
+void StaticAnalyzer::visitClassDefInherit(ClassDefInherit *p) {
+  if(is_a_basic_type(p->ident_1)) 
+    fail("you can't have " + p->ident_1 + " as a class name\n", p);
+  if(is_a_basic_type(p->ident_2))
+    fail("you can't inherit from basic type\n", p);
+  if(p->ident_2 != "" && env_of_structures.find(p->ident_2) == env_of_structures.end())
+    fail("class " + p->ident_2 + " was not recognized.\n", p);
+
   set <Ident> present_args;
+  set <Ident> present_fns;
 
-  for(int i = 0; i < p->liststructmember_->size(); i++) {
-    auto member = ((*(p->liststructmember_))[i]);
-    if(auto no_init_member = dynamic_cast<StructMemNoInit*>(member)) {
-      if(get_type(no_init_member->type_) == TYPE_VOID)
-        fail("struct can't have void as an attribute\n",no_init_member);
-      if(!is_a_valid_type(no_init_member->type_, env_of_structures)) 
-        fail(get_type(no_init_member->type_) + " does not name a valid type\n", no_init_member);
-      if(present_args.find(no_init_member->ident_) != present_args.end()) 
-        fail("member" + no_init_member->ident_ + " was already present\n", no_init_member);
+  for(int i = 0; i < p->listclassmember_->size(); i++) {
+    auto member = ((*(p->listclassmember_))[i]);
+    if(auto new_member = dynamic_cast<ClassMem*>(member)) {
+      if(get_type(new_member->type_) == TYPE_VOID)
+        fail("class can't have void as an attribute\n",new_member);
+      if(!is_a_valid_type(new_member->type_, env_of_structures)) 
+        fail(get_type(new_member->type_) + " does not name a valid type\n", new_member);
+      if(present_args.find(new_member->ident_) != present_args.end()) 
+        fail("member" + new_member->ident_ + " was already present\n", new_member);
+      if(new_member->ident_ == "self")
+        fail("self is a reserved keyword\n", new_member);
 
-      present_args.insert(no_init_member->ident_);
+      present_args.insert(new_member->ident_);
     }
     
-    if(auto init_member = dynamic_cast<StructMemInit*>(member)) {
-      if(get_type(init_member->type_) == TYPE_VOID)
-        fail("struct can't have TYPE_VOID as an attribute\n", init_member);
-      if(!is_a_valid_type(init_member->type_, env_of_structures)) 
-        fail(get_type(init_member->type_) + " does not name a valid type\n", init_member);
-      if(present_args.find(init_member->ident_) != present_args.end()) 
-        fail("member" + init_member->ident_ + " was already present\n", init_member);
+    if(auto fun_member = dynamic_cast<ClassFun*>(member)) {
+      if(!is_a_valid_type(fun_member->type_, env_of_structures)) 
+        fail(get_type(fun_member->type_) + " does not name a valid type\n", fun_member);
+      if(present_fns.find(fun_member->ident_) != present_fns.end()) 
+        fail("member" + fun_member->ident_ + " was already present\n", fun_member);
 
-      init_member->expr_->accept(this);
-      check_for_type_matching(get_type(init_member->type_), last_evaluated_expr, init_member);
-      present_args.insert(init_member->ident_);
+      vector <TYPE> arg_types;
+      for(int j = 0 ; j < fun_member->listarg_->size(); j++)
+        if(auto arg = dynamic_cast<ArgDef*>((*(fun_member->listarg_))[j]))
+          arg_types.push_back(get_type(arg->type_));
+
+
+
+      auto tmp_env_of_vars = env_of_vars;
+
+      for(auto mem : env_of_structures[p->ident_1]) {
+        env_of_vars[mem.first] = mem.second;
+      }
+      env_of_vars["self"] = p->ident_1;
+
+      FnDef* tmp_fun = new FnDef{fun_member->type_->clone(), fun_member->ident_, fun_member->listarg_->clone(), fun_member->block_->clone()};
+
+      tmp_fun->accept(this);
+      env_of_vars = tmp_env_of_vars;
+      present_fns.insert(fun_member->ident_);
     }
   }
+
 }
 
-void StaticAnalyzer::visitEmptyStructDef(EmptyStructDef *p) {
+void StaticAnalyzer::visitEmptyClassDef(EmptyClassDef *p) {
   if(is_a_basic_type(p->ident_)) {
-    fail("you can't have " + p->ident_ + " as a struct name\n", p);
+    fail("you can't have " + p->ident_ + " as a class name\n", p);
   }
 }
 
 
-void StaticAnalyzer::visitStructMember(StructMember *p) {} //abstract class
+void StaticAnalyzer::visitClassMember(ClassMember *p) {} //abstract class
 
-void StaticAnalyzer::visitStructMemNoInit(StructMemNoInit *p)
+void StaticAnalyzer::visitClassMem(ClassMem *p)
 {
 }
 
-void StaticAnalyzer::visitStructMemInit(StructMemInit *p)
-{
+void StaticAnalyzer::visitClassFun(ClassFun *p) {
+
 }
 
-void StaticAnalyzer::visitListStructMember(ListStructMember *liststructmember)
+void StaticAnalyzer::visitListClassMember(ListClassMember *liststructmember)
 {
 }
 
@@ -194,10 +272,12 @@ void StaticAnalyzer::visitIdentExp(IdentExp *p) {
   if(p->identexpan_)
     p->identexpan_->accept(this);
   
-  if(env_of_structures[last_evaluated_expr].find(p->ident_) == env_of_structures[last_evaluated_expr].end()) 
+  auto member = is_there_a_member(last_evaluated_expr, p->ident_, env_of_structures, env_of_classes);
+
+  if(!member.has_value()) 
     fail(last_evaluated_expr + " does not have " + p->ident_ + " as a member\n", p);
   
-  last_evaluated_expr = env_of_structures[last_evaluated_expr][p->ident_];
+  last_evaluated_expr = member.value();
 }
 
 void StaticAnalyzer::visitIdentExpSimple(IdentExpSimple *p) {
@@ -209,6 +289,25 @@ void StaticAnalyzer::visitIdentExpSimple(IdentExpSimple *p) {
 }
 
 
+pair <map<Ident, TYPE>, FunEnv> extract_data(ClassDefInherit* class_def) {
+  map <Ident, TYPE> members;
+  FunEnv class_functions;
+  for(auto item : *class_def->listclassmember_) {
+    if(auto member = dynamic_cast<ClassMem*>(item)) {
+      members[member->ident_] = get_type(member->type_);
+    }
+    if(auto fn_def = dynamic_cast<ClassFun*>(item)) {
+      vector <TYPE> arg_types;
+
+      for(int j = 0 ; j < fn_def->listarg_->size(); j++)
+        if(auto arg = dynamic_cast<ArgDef*>((*(fn_def->listarg_))[j]))
+          arg_types.push_back(get_type(arg->type_));
+
+      class_functions[fn_def->ident_] = make_pair(arg_types, get_type(fn_def->type_));
+    }
+  }
+  return make_pair(members, class_functions);
+} 
 
 void StaticAnalyzer::visitListTopDef(ListTopDef *listtopdef)
 {
@@ -239,26 +338,36 @@ void StaticAnalyzer::visitListTopDef(ListTopDef *listtopdef)
 
       env_of_functions[fn_def->ident_] = make_pair(arg_types, get_type(fn_def->type_));
     }
-    if(auto struct_def = dynamic_cast<StructDef*>(*i)) {
-      map <Ident, TYPE> members;
-      auto items = struct_def->liststructmember_;
-      for(auto item : *items) {
-        if(auto member = dynamic_cast<StructMemNoInit*>(item))
-          members[member->ident_] = get_type(member->type_);
-        if(auto member = dynamic_cast<StructMemInit*>(item))
-          members[member->ident_] = get_type(member->type_);
-      }
+    if(auto class_def = dynamic_cast<ClassDefInherit*>(*i)) {
+      if(env_of_structures.find(class_def->ident_1) != env_of_structures.end())
+        fail("class was defined before\n", class_def);
 
-      if(env_of_structures.find(struct_def->ident_) != env_of_structures.end())
-        fail("struct was defined before\n", struct_def);
-      env_of_structures[struct_def->ident_] = members;
+      auto data = extract_data(class_def);
+
+      env_of_structures[class_def->ident_1] = data.first;
+      env_of_classes[class_def->ident_1] = make_pair(data.second, class_def->ident_2);
+      // cerr << "Now class " << class_def->ident_1 << " inherits from " << class_def->ident_2 << "\n";
     }
-    if(auto struct_def = dynamic_cast<EmptyStructDef*>(*i)) {
-      if(env_of_structures.find(struct_def->ident_) != env_of_structures.end())
-        fail("struct was defined before\n", struct_def);
+    if(auto class_def = dynamic_cast<ClassDefNoInherit*>(*i)) {
+      if(env_of_structures.find(class_def->ident_) != env_of_structures.end())
+        fail("class was defined before\n", class_def);
+
+      auto data = extract_data(port(class_def));
+
+      env_of_structures[class_def->ident_] = data.first;
+      env_of_classes[class_def->ident_] = make_pair(data.second, "");
+    }
+    if(auto class_def = dynamic_cast<EmptyClassDef*>(*i)) {
+      if(env_of_structures.find(class_def->ident_) != env_of_structures.end())
+        fail("class was defined before\n", class_def);
+
       map <Ident, TYPE> no_members;
-      env_of_structures[struct_def->ident_] = no_members;
+      FunEnv no_class_functions;
+
+      env_of_structures[class_def->ident_] = no_members;
+      env_of_classes[class_def->ident_] = make_pair(no_class_functions, "");
     }
+    
     
   }
   
@@ -354,10 +463,11 @@ void StaticAnalyzer::visitDecl(Decl *p)
         defined_in_current_scope.insert(init->ident_);
         env_of_vars[init->ident_] = get_type(p->type_);
       }
-      if(auto init = dynamic_cast<InitStruct*>(*i)) {
+      if(auto init = dynamic_cast<InitClass*>(*i)) {
         same_scope_redefinition(init->ident_1, &defined_in_current_scope, init);
         
-        if(get_type(p->type_) != init->ident_2) 
+        // if(get_type(p->type_) != init->ident_2) 
+        if(!is_an_ancestor_type(init->ident_2, get_type(p->type_), env_of_classes))
           fail(init->ident_1 + " was declared as a " + get_type(p->type_) + " but was assigned a new " + init->ident_2 + "\n", init);
         
         defined_in_current_scope.insert(init->ident_1);
@@ -367,7 +477,7 @@ void StaticAnalyzer::visitDecl(Decl *p)
   }
 }
 
-void StaticAnalyzer::visitNewStruct(NewStruct *p) {
+void StaticAnalyzer::visitNewClass(NewClass *p) {
   // Here identexpan_ is a id of a variable
   // And ident_ is a name of the struct
   p->identexpan_->accept(this);
@@ -380,7 +490,12 @@ void StaticAnalyzer::visitAss(Ass *p)
   p->identexpan_->accept(this);
   auto var_type = last_evaluated_expr;
   p->expr_->accept(this);
-  check_for_type_matching(var_type, last_evaluated_expr, p);
+  // if(is_a_basic_type(var_type))
+  check_for_type_matching(var_type, last_evaluated_expr, env_of_classes ,p);
+  // else 
+  //   if(!is_an_ancestor_type(last_evaluated_expr, var_type, env_of_classes))
+  //     fail(identExpToString(*p->identexpan_) + " was declared as a " + var_type + " but was assigned a new " + last_evaluated_expr + "\n", p);
+
 }
 
 void StaticAnalyzer::visitIncr(Incr *p)
@@ -505,7 +620,7 @@ void StaticAnalyzer::visitNoInit(NoInit *p)
 {  
 }
 
-void StaticAnalyzer::visitInitStruct(InitStruct *p) {
+void StaticAnalyzer::visitInitClass(InitClass *p) {
 
 }
 
@@ -535,7 +650,7 @@ void StaticAnalyzer::visitVoid(Void *p)
 {
 }
 
-void StaticAnalyzer::visitStruct(Struct *p)
+void StaticAnalyzer::visitClass(Class *p)
 {
 }
 
@@ -595,17 +710,42 @@ void StaticAnalyzer::visitELitFalse(ELitFalse *p)
 
 void StaticAnalyzer::visitEApp(EApp *p)
 {
-  check_for_existence(p->ident_, &env_of_functions, p);
-  auto expected_arg_types = env_of_functions[p->ident_].first;
-  if(p->listexpr_->size() != expected_arg_types.size()) 
-    fail("function " + p->ident_ + " was supplied " + to_string(p->listexpr_->size()) + " arguments but needed " + to_string(expected_arg_types.size()) + "\n", p);
+  if(auto simple_ident = dynamic_cast<IdentExpSimple*>(p->identexpan_)) {
+    auto ident = simple_ident->ident_;
+    
+    check_for_existence(ident, &env_of_functions, p);
+    auto expected_arg_types = env_of_functions[ident].first;
+    if(p->listexpr_->size() != expected_arg_types.size()) 
+      fail("function " + ident + " was supplied " + to_string(p->listexpr_->size()) + " arguments but needed " + to_string(expected_arg_types.size()) + "\n", p);
 
-  for(int i = 0; i < p->listexpr_->size(); i++) {
-    (*(p->listexpr_))[i]->accept(this);
-    check_for_type_matching(expected_arg_types[i], last_evaluated_expr, p);
+    for(int i = 0; i < p->listexpr_->size(); i++) {
+      (*(p->listexpr_))[i]->accept(this);
+      check_for_type_matching(expected_arg_types[i], last_evaluated_expr, p);
+    }
+    last_evaluated_expr = env_of_functions[ident].second;
+    last_evaluated_expr_value = DECOY;
   }
-  last_evaluated_expr = env_of_functions[p->ident_].second;
-  last_evaluated_expr_value = DECOY;
+  if(auto complex_ident = dynamic_cast<IdentExp*>(p->identexpan_)) {
+    auto fn_ident = complex_ident->ident_;
+    (complex_ident->identexpan_)->accept(this);
+    auto class_type = last_evaluated_expr;
+
+    auto function = is_there_a_function(class_type, fn_ident, env_of_classes);
+
+    if(!function.has_value())
+      fail("class " + last_evaluated_expr + " and it's ancestors does not have a class function " + fn_ident, complex_ident);
+
+    auto expected_arg_types = function.value().first;
+    if(p->listexpr_->size() != expected_arg_types.size()) 
+      fail("function " + fn_ident + " was supplied " + to_string(p->listexpr_->size()) + " arguments but needed " + to_string(expected_arg_types.size()) + "\n", p);
+
+    for(int i = 0; i < p->listexpr_->size(); i++) {
+      (*(p->listexpr_))[i]->accept(this);
+      check_for_type_matching(expected_arg_types[i], last_evaluated_expr, env_of_classes, p);
+    }
+    last_evaluated_expr = function.value().second;
+    last_evaluated_expr_value = DECOY;
+  }
 
   p->expr_type_ = last_evaluated_expr;
 }

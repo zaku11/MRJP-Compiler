@@ -36,8 +36,14 @@ struct NOVALUE {
 // NOVALUE means here that the calculation was impossible
 typedef std :: variant <int, bool, std::string, NOVALUE> VALUE;
 typedef std :: map<Ident, TYPE> VarEnv;
-typedef std :: map<Ident, std :: pair<std :: vector<TYPE>, TYPE>> FunEnv;
+typedef std :: pair<std :: vector<TYPE>, TYPE> FunctionType;
+typedef std :: map<Ident, FunctionType> FunEnv;
+
+// Data about classes will be kept in two different places
+// Here we remember it's struct part = all member names and their types
 typedef std :: map<TYPE, std :: map<Ident, TYPE> > StructEnv;
+// For each class we will remember all of it's functions and possible upwards inheritance
+typedef std :: map<TYPE, std :: pair<FunEnv, Ident> > ClassEnv;
 
 class StaticAnalyzer : public Visitor
 {
@@ -49,15 +55,16 @@ protected:
   TYPE expected_return_type = TYPE_VOID;
   TYPE last_return = TYPE_VOID;
 
-
   std :: set <Ident> defined_in_current_scope; 
   
-  StructEnv env_of_structures;
   VarEnv env_of_vars;
   FunEnv env_of_functions;
   
   void run_with_rollback(Visitable *v);
 public:
+  StructEnv env_of_structures;
+  ClassEnv env_of_classes;
+
   StaticAnalyzer(void);
   ~StaticAnalyzer(void);
   void analyze(Visitable *v);
@@ -67,13 +74,14 @@ public:
   void visitTopDef(TopDef *p); /* abstract class */
   void visitFnDef(FnDef *p);
 
-  void visitStructDef(StructDef *p);
-  void visitEmptyStructDef(EmptyStructDef *p);
+  void visitClassDefNoInherit(ClassDefNoInherit *p);
+  void visitClassDefInherit(ClassDefInherit *p);
+  void visitEmptyClassDef(EmptyClassDef *p);
+  void visitClassMember(ClassMember *p); /* abstract class */
+  void visitClassMem(ClassMem *p);
+  void visitClassFun(ClassFun *p);
+  void visitListClassMember(ListClassMember *p);
 
-  void visitStructMember(StructMember *p); /* abstract class */
-  void visitStructMemNoInit(StructMemNoInit *p);
-  void visitStructMemInit(StructMemInit *p);
-  void visitListStructMember(ListStructMember *p);
   void visitIdentExpan(IdentExpan *p); /* abstract class */
   void visitIdentExp(IdentExp *p);
   void visitIdentExpSimple(IdentExpSimple *p);
@@ -90,7 +98,7 @@ public:
   void visitBStmt(BStmt *p);
   void visitDecl(Decl *p);
   void visitAss(Ass *p);
-  void visitNewStruct(NewStruct *p);
+  void visitNewClass(NewClass *p);
   void visitIncr(Incr *p);
   void visitDecr(Decr *p);
   void visitRet(Ret *p);
@@ -105,11 +113,11 @@ public:
   void visitListItem(ListItem *p);
   void visitType(Type *p); /* abstract class */
   void visitInt(Int *p);
-  void visitInitStruct(InitStruct *p);
+  void visitInitClass(InitClass *p);
   void visitStr(Str *p);
   void visitBool(Bool *p);
   void visitVoid(Void *p);
-  void visitStruct(Struct *p);
+  void visitClass(Class *p);
   void visitFun(Fun *p);
   void visitListType(ListType *p);
   void visitExpr(Expr *p); /* abstract class */

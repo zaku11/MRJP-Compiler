@@ -10,7 +10,7 @@
 
 void Skeleton::visitProgram(Program *t) {} //abstract class
 void Skeleton::visitTopDef(TopDef *t) {} //abstract class
-void Skeleton::visitStructMember(StructMember *t) {} //abstract class
+void Skeleton::visitClassMember(ClassMember *t) {} //abstract class
 void Skeleton::visitIdentExpan(IdentExpan *t) {} //abstract class
 void Skeleton::visitArg(Arg *t) {} //abstract class
 void Skeleton::visitBlock(Block *t) {} //abstract class
@@ -41,39 +41,50 @@ void Skeleton::visitFnDef(FnDef *fn_def)
 
 }
 
-void Skeleton::visitStructDef(StructDef *struct_def)
+void Skeleton::visitClassDefNoInherit(ClassDefNoInherit *class_def_no_inherit)
 {
-  /* Code For StructDef Goes Here */
+  /* Code For ClassDefNoInherit Goes Here */
 
-  visitIdent(struct_def->ident_);
-  struct_def->liststructmember_->accept(this);
+  visitIdent(class_def_no_inherit->ident_);
+  class_def_no_inherit->listclassmember_->accept(this);
 
 }
 
-void Skeleton::visitEmptyStructDef(EmptyStructDef *empty_struct_def)
+void Skeleton::visitClassDefInherit(ClassDefInherit *class_def_inherit)
 {
-  /* Code For EmptyStructDef Goes Here */
+  /* Code For ClassDefInherit Goes Here */
 
-  visitIdent(empty_struct_def->ident_);
+  visitIdent(class_def_inherit->ident_1);
+  visitIdent(class_def_inherit->ident_2);
+  class_def_inherit->listclassmember_->accept(this);
 
 }
 
-void Skeleton::visitStructMemNoInit(StructMemNoInit *struct_mem_no_init)
+void Skeleton::visitEmptyClassDef(EmptyClassDef *empty_class_def)
 {
-  /* Code For StructMemNoInit Goes Here */
+  /* Code For EmptyClassDef Goes Here */
 
-  struct_mem_no_init->type_->accept(this);
-  visitIdent(struct_mem_no_init->ident_);
+  visitIdent(empty_class_def->ident_);
 
 }
 
-void Skeleton::visitStructMemInit(StructMemInit *struct_mem_init)
+void Skeleton::visitClassMem(ClassMem *class_mem)
 {
-  /* Code For StructMemInit Goes Here */
+  /* Code For ClassMem Goes Here */
 
-  struct_mem_init->type_->accept(this);
-  visitIdent(struct_mem_init->ident_);
-  struct_mem_init->expr_->accept(this);
+  class_mem->type_->accept(this);
+  visitIdent(class_mem->ident_);
+
+}
+
+void Skeleton::visitClassFun(ClassFun *class_fun)
+{
+  /* Code For ClassFun Goes Here */
+
+  class_fun->type_->accept(this);
+  visitIdent(class_fun->ident_);
+  class_fun->listarg_->accept(this);
+  class_fun->block_->accept(this);
 
 }
 
@@ -144,12 +155,12 @@ void Skeleton::visitAss(Ass *ass)
 
 }
 
-void Skeleton::visitNewStruct(NewStruct *new_struct)
+void Skeleton::visitNewClass(NewClass *new_class)
 {
-  /* Code For NewStruct Goes Here */
+  /* Code For NewClass Goes Here */
 
-  new_struct->identexpan_->accept(this);
-  visitIdent(new_struct->ident_);
+  new_class->identexpan_->accept(this);
+  visitIdent(new_class->ident_);
 
 }
 
@@ -237,12 +248,12 @@ void Skeleton::visitInit(Init *init)
 
 }
 
-void Skeleton::visitInitStruct(InitStruct *init_struct)
+void Skeleton::visitInitClass(InitClass *init_class)
 {
-  /* Code For InitStruct Goes Here */
+  /* Code For InitClass Goes Here */
 
-  visitIdent(init_struct->ident_1);
-  visitIdent(init_struct->ident_2);
+  visitIdent(init_class->ident_1);
+  visitIdent(init_class->ident_2);
 
 }
 
@@ -274,11 +285,11 @@ void Skeleton::visitVoid(Void *void_)
 
 }
 
-void Skeleton::visitStruct(Struct *struct_)
+void Skeleton::visitClass(Class *class_)
 {
-  /* Code For Struct Goes Here */
+  /* Code For Class Goes Here */
 
-  visitIdent(struct_->ident_);
+  visitIdent(class_->ident_);
 
 }
 
@@ -333,7 +344,7 @@ void Skeleton::visitEApp(EApp *e_app)
 {
   /* Code For EApp Goes Here */
 
-  visitIdent(e_app->ident_);
+  e_app->identexpan_->accept(this);
   e_app->listexpr_->accept(this);
 
 }
@@ -488,9 +499,9 @@ void Skeleton::visitNE(NE *ne)
 }
 
 
-void Skeleton::visitListStructMember(ListStructMember *list_struct_member)
+void Skeleton::visitListClassMember(ListClassMember *list_class_member)
 {
-  for (ListStructMember::iterator i = list_struct_member->begin() ; i != list_struct_member->end() ; ++i)
+  for (ListClassMember::iterator i = list_class_member->begin() ; i != list_class_member->end() ; ++i)
   {
     (*i)->accept(this);
   }

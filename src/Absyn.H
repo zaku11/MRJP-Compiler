@@ -21,7 +21,7 @@ typedef std::string Ident;
 
 class Program;
 class TopDef;
-class StructMember;
+class ClassMember;
 class IdentExpan;
 class Arg;
 class Block;
@@ -34,10 +34,11 @@ class MulOp;
 class RelOp;
 class ProgramDef;
 class FnDef;
-class StructMemNoInit;
-class StructMemInit;
-class StructDef;
-class EmptyStructDef;
+class ClassMem;
+class ClassFun;
+class ClassDefNoInherit;
+class ClassDefInherit;
+class EmptyClassDef;
 class IdentExp;
 class IdentExpSimple;
 class ArgDef;
@@ -47,9 +48,9 @@ class BStmt;
 class Decl;
 class NoInit;
 class Init;
-class InitStruct;
+class InitClass;
 class Ass;
-class NewStruct;
+class NewClass;
 class Incr;
 class Decr;
 class Ret;
@@ -62,7 +63,7 @@ class Int;
 class Str;
 class Bool;
 class Void;
-class Struct;
+class Class;
 class Fun;
 class ENullCast;
 class EVar;
@@ -89,7 +90,7 @@ class GTH;
 class GE;
 class EQU;
 class NE;
-class ListStructMember;
+class ListClassMember;
 class ListTopDef;
 class ListArg;
 class ListStmt;
@@ -105,7 +106,7 @@ public:
   virtual ~Visitor() {}
   virtual void visitProgram(Program *p) = 0;
   virtual void visitTopDef(TopDef *p) = 0;
-  virtual void visitStructMember(StructMember *p) = 0;
+  virtual void visitClassMember(ClassMember *p) = 0;
   virtual void visitIdentExpan(IdentExpan *p) = 0;
   virtual void visitArg(Arg *p) = 0;
   virtual void visitBlock(Block *p) = 0;
@@ -118,10 +119,11 @@ public:
   virtual void visitRelOp(RelOp *p) = 0;
   virtual void visitProgramDef(ProgramDef *p) = 0;
   virtual void visitFnDef(FnDef *p) = 0;
-  virtual void visitStructMemNoInit(StructMemNoInit *p) = 0;
-  virtual void visitStructMemInit(StructMemInit *p) = 0;
-  virtual void visitStructDef(StructDef *p) = 0;
-  virtual void visitEmptyStructDef(EmptyStructDef *p) = 0;
+  virtual void visitClassMem(ClassMem *p) = 0;
+  virtual void visitClassFun(ClassFun *p) = 0;
+  virtual void visitClassDefNoInherit(ClassDefNoInherit *p) = 0;
+  virtual void visitClassDefInherit(ClassDefInherit *p) = 0;
+  virtual void visitEmptyClassDef(EmptyClassDef *p) = 0;
   virtual void visitIdentExp(IdentExp *p) = 0;
   virtual void visitIdentExpSimple(IdentExpSimple *p) = 0;
   virtual void visitArgDef(ArgDef *p) = 0;
@@ -131,9 +133,9 @@ public:
   virtual void visitDecl(Decl *p) = 0;
   virtual void visitNoInit(NoInit *p) = 0;
   virtual void visitInit(Init *p) = 0;
-  virtual void visitInitStruct(InitStruct *p) = 0;
+  virtual void visitInitClass(InitClass *p) = 0;
   virtual void visitAss(Ass *p) = 0;
-  virtual void visitNewStruct(NewStruct *p) = 0;
+  virtual void visitNewClass(NewClass *p) = 0;
   virtual void visitIncr(Incr *p) = 0;
   virtual void visitDecr(Decr *p) = 0;
   virtual void visitRet(Ret *p) = 0;
@@ -146,7 +148,7 @@ public:
   virtual void visitStr(Str *p) = 0;
   virtual void visitBool(Bool *p) = 0;
   virtual void visitVoid(Void *p) = 0;
-  virtual void visitStruct(Struct *p) = 0;
+  virtual void visitClass(Class *p) = 0;
   virtual void visitFun(Fun *p) = 0;
   virtual void visitENullCast(ENullCast *p) = 0;
   virtual void visitEVar(EVar *p) = 0;
@@ -173,7 +175,7 @@ public:
   virtual void visitGE(GE *p) = 0;
   virtual void visitEQU(EQU *p) = 0;
   virtual void visitNE(NE *p) = 0;
-  virtual void visitListStructMember(ListStructMember *p) = 0;
+  virtual void visitListClassMember(ListClassMember *p) = 0;
   virtual void visitListTopDef(ListTopDef *p) = 0;
   virtual void visitListArg(ListArg *p) = 0;
   virtual void visitListStmt(ListStmt *p) = 0;
@@ -215,10 +217,10 @@ public:
   int line_number;
 };
 
-class StructMember : public Visitable
+class ClassMember : public Visitable
 {
 public:
-  virtual StructMember *clone() const = 0;
+  virtual ClassMember *clone() const = 0;
   int line_number;
 };
 
@@ -327,64 +329,81 @@ public:
   void swap(FnDef &);
 };
 
-class StructDef : public TopDef
+class ClassDefNoInherit : public TopDef
 {
 public:
   Ident ident_;
-  ListStructMember *liststructmember_;
+  ListClassMember *listclassmember_;
 
-  StructDef(const StructDef &);
-  StructDef &operator=(const StructDef &);
-  StructDef(Ident p1, ListStructMember *p2);
-  ~StructDef();
+  ClassDefNoInherit(const ClassDefNoInherit &);
+  ClassDefNoInherit &operator=(const ClassDefNoInherit &);
+  ClassDefNoInherit(Ident p1, ListClassMember *p2);
+  ~ClassDefNoInherit();
   virtual void accept(Visitor *v);
-  virtual StructDef *clone() const;
-  void swap(StructDef &);
+  virtual ClassDefNoInherit *clone() const;
+  void swap(ClassDefNoInherit &);
 };
 
-class EmptyStructDef : public TopDef
+class ClassDefInherit : public TopDef
+{
+public:
+  Ident ident_1;
+  Ident ident_2;
+  ListClassMember *listclassmember_;
+
+  ClassDefInherit(const ClassDefInherit &);
+  ClassDefInherit &operator=(const ClassDefInherit &);
+  ClassDefInherit(Ident p1, Ident p2, ListClassMember *p3);
+  ~ClassDefInherit();
+  virtual void accept(Visitor *v);
+  virtual ClassDefInherit *clone() const;
+  void swap(ClassDefInherit &);
+};
+
+class EmptyClassDef : public TopDef
 {
 public:
   Ident ident_;
 
-  EmptyStructDef(const EmptyStructDef &);
-  EmptyStructDef &operator=(const EmptyStructDef &);
-  EmptyStructDef(Ident p1);
-  ~EmptyStructDef();
+  EmptyClassDef(const EmptyClassDef &);
+  EmptyClassDef &operator=(const EmptyClassDef &);
+  EmptyClassDef(Ident p1);
+  ~EmptyClassDef();
   virtual void accept(Visitor *v);
-  virtual EmptyStructDef *clone() const;
-  void swap(EmptyStructDef &);
+  virtual EmptyClassDef *clone() const;
+  void swap(EmptyClassDef &);
 };
 
-class StructMemNoInit : public StructMember
+class ClassMem : public ClassMember
 {
 public:
   Type *type_;
   Ident ident_;
 
-  StructMemNoInit(const StructMemNoInit &);
-  StructMemNoInit &operator=(const StructMemNoInit &);
-  StructMemNoInit(Type *p1, Ident p2);
-  ~StructMemNoInit();
+  ClassMem(const ClassMem &);
+  ClassMem &operator=(const ClassMem &);
+  ClassMem(Type *p1, Ident p2);
+  ~ClassMem();
   virtual void accept(Visitor *v);
-  virtual StructMemNoInit *clone() const;
-  void swap(StructMemNoInit &);
+  virtual ClassMem *clone() const;
+  void swap(ClassMem &);
 };
 
-class StructMemInit : public StructMember
+class ClassFun : public ClassMember
 {
 public:
   Type *type_;
   Ident ident_;
-  Expr *expr_;
+  ListArg *listarg_;
+  Block *block_;
 
-  StructMemInit(const StructMemInit &);
-  StructMemInit &operator=(const StructMemInit &);
-  StructMemInit(Type *p1, Ident p2, Expr *p3);
-  ~StructMemInit();
+  ClassFun(const ClassFun &);
+  ClassFun &operator=(const ClassFun &);
+  ClassFun(Type *p1, Ident p2, ListArg *p3, Block *p4);
+  ~ClassFun();
   virtual void accept(Visitor *v);
-  virtual StructMemInit *clone() const;
-  void swap(StructMemInit &);
+  virtual ClassFun *clone() const;
+  void swap(ClassFun &);
 };
 
 class IdentExp : public IdentExpan
@@ -503,19 +522,19 @@ public:
   void swap(Ass &);
 };
 
-class NewStruct : public Stmt
+class NewClass : public Stmt
 {
 public:
   IdentExpan *identexpan_;
   Ident ident_;
 
-  NewStruct(const NewStruct &);
-  NewStruct &operator=(const NewStruct &);
-  NewStruct(IdentExpan *p1, Ident p2);
-  ~NewStruct();
+  NewClass(const NewClass &);
+  NewClass &operator=(const NewClass &);
+  NewClass(IdentExpan *p1, Ident p2);
+  ~NewClass();
   virtual void accept(Visitor *v);
-  virtual NewStruct *clone() const;
-  void swap(NewStruct &);
+  virtual NewClass *clone() const;
+  void swap(NewClass &);
 };
 
 class Incr : public Stmt
@@ -662,19 +681,19 @@ public:
   void swap(Init &);
 };
 
-class InitStruct : public Item
+class InitClass : public Item
 {
 public:
   Ident ident_1;
   Ident ident_2;
 
-  InitStruct(const InitStruct &);
-  InitStruct &operator=(const InitStruct &);
-  InitStruct(Ident p1, Ident p2);
-  ~InitStruct();
+  InitClass(const InitClass &);
+  InitClass &operator=(const InitClass &);
+  InitClass(Ident p1, Ident p2);
+  ~InitClass();
   virtual void accept(Visitor *v);
-  virtual InitStruct *clone() const;
-  void swap(InitStruct &);
+  virtual InitClass *clone() const;
+  void swap(InitClass &);
 };
 
 class Int : public Type
@@ -729,18 +748,18 @@ public:
   void swap(Void &);
 };
 
-class Struct : public Type
+class Class : public Type
 {
 public:
   Ident ident_;
 
-  Struct(const Struct &);
-  Struct &operator=(const Struct &);
-  Struct(Ident p1);
-  ~Struct();
+  Class(const Class &);
+  Class &operator=(const Class &);
+  Class(Ident p1);
+  ~Class();
   virtual void accept(Visitor *v);
-  virtual Struct *clone() const;
-  void swap(Struct &);
+  virtual Class *clone() const;
+  void swap(Class &);
 };
 
 class Fun : public Type
@@ -829,12 +848,12 @@ public:
 class EApp : public Expr
 {
 public:
-  Ident ident_;
+  IdentExpan *identexpan_;
   ListExpr *listexpr_;
 
   EApp(const EApp &);
   EApp &operator=(const EApp &);
-  EApp(Ident p1, ListExpr *p2);
+  EApp(IdentExpan *p1, ListExpr *p2);
   ~EApp();
   virtual void accept(Visitor *v);
   virtual EApp *clone() const;
@@ -1106,11 +1125,11 @@ public:
 
 
 
-class ListStructMember : public Visitable, public std::vector<StructMember*>
+class ListClassMember : public Visitable, public std::vector<ClassMember*>
 {
 public:
   virtual void accept(Visitor *v);
-  virtual ListStructMember *clone() const;
+  virtual ListClassMember *clone() const;
 };
 
 class ListTopDef : public Visitable, public std::vector<TopDef*>

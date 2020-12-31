@@ -45,12 +45,13 @@ void render(char *s);
   void visitProgramDef(ProgramDef *p);
   void visitTopDef(TopDef *p); /* abstract class */
   void visitFnDef(FnDef *p);
-  void visitEmptyStructDef(EmptyStructDef *p);
-  void visitStructDef(StructDef *p);
-  void visitStructMember(StructMember *p); /* abstract class */
-  void visitStructMemNoInit(StructMemNoInit *p);
-  void visitStructMemInit(StructMemInit *p);
-  void visitListStructMember(ListStructMember *p);
+  void visitClassDefNoInherit(ClassDefNoInherit *p);
+  void visitClassDefInherit(ClassDefInherit *p);
+  void visitEmptyClassDef(EmptyClassDef *p);
+  void visitClassMember(ClassMember *p); /* abstract class */
+  void visitClassMem(ClassMem *p);
+  void visitClassFun(ClassFun *p);
+  void visitListClassMember(ListClassMember *p);
   void visitIdentExpan(IdentExpan *p); /* abstract class */
   void visitIdentExp(IdentExp *p);
   void visitIdentExpSimple(IdentExpSimple *p);
@@ -66,7 +67,7 @@ void render(char *s);
   void visitBStmt(BStmt *p);
   void visitDecl(Decl *p);
   void visitAss(Ass *p);
-  void visitNewStruct(NewStruct *p);
+  void visitNewClass(NewClass *p);
   void visitIncr(Incr *p);
   void visitDecr(Decr *p);
   void visitRet(Ret *p);
@@ -78,14 +79,14 @@ void render(char *s);
   void visitItem(Item *p); /* abstract class */
   void visitNoInit(NoInit *p);
   void visitInit(Init *p);
-  void visitInitStruct(InitStruct *p);
+  void visitInitClass(InitClass *p);
   void visitListItem(ListItem *p);
   void visitType(Type *p); /* abstract class */
   void visitInt(Int *p);
   void visitStr(Str *p);
   void visitBool(Bool *p);
   void visitVoid(Void *p);
-  void visitStruct(Struct *p);
+  void visitClass(Class *p);
   void visitFun(Fun *p);
   void visitListType(ListType *p);
   void visitExpr(Expr *p); /* abstract class */

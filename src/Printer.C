@@ -179,7 +179,43 @@ void PrintAbsyn::visitFnDef(FnDef *p)
   try_to_end(p, p->line_number);
 }
 
-void PrintAbsyn::visitEmptyStructDef(EmptyStructDef *p)
+void PrintAbsyn::visitClassDefNoInherit(ClassDefNoInherit *p)
+{
+  int oldi = _i_;
+  if (oldi > 0) render(_L_PAREN);
+
+  render((char*)"class");
+  visitIdent(p->ident_);
+  render('{');
+  if(p->listclassmember_) {_i_ = 0; p->listclassmember_->accept(this);}
+  render('}');
+
+  if (oldi > 0) render(_R_PAREN);
+
+  _i_ = oldi;
+  try_to_end(p, p->line_number);
+}
+
+void PrintAbsyn::visitClassDefInherit(ClassDefInherit *p)
+{
+  int oldi = _i_;
+  if (oldi > 0) render(_L_PAREN);
+
+  render((char*)"class");
+  visitIdent(p->ident_1);
+  render((char*)"extends");
+  visitIdent(p->ident_2);
+  render('{');
+  if(p->listclassmember_) {_i_ = 0; p->listclassmember_->accept(this);}
+  render('}');
+
+  if (oldi > 0) render(_R_PAREN);
+
+  _i_ = oldi;
+  try_to_end(p, p->line_number);
+}
+
+void PrintAbsyn::visitEmptyClassDef(EmptyClassDef *p)
 {
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
@@ -195,27 +231,9 @@ void PrintAbsyn::visitEmptyStructDef(EmptyStructDef *p)
   try_to_end(p, p->line_number);
 }
 
+void PrintAbsyn::visitClassMember(ClassMember *p) {} //abstract class
 
-void PrintAbsyn::visitStructDef(StructDef *p)
-{
-  int oldi = _i_;
-  if (oldi > 0) render(_L_PAREN);
-
-  render((char*)"class");
-  visitIdent(p->ident_);
-  render('{');
-  if(p->liststructmember_) {_i_ = 0; p->liststructmember_->accept(this);}
-  render('}');
-
-  if (oldi > 0) render(_R_PAREN);
-
-  _i_ = oldi;
-  try_to_end(p, p->line_number);
-}
-
-void PrintAbsyn::visitStructMember(StructMember *p) {} //abstract class
-
-void PrintAbsyn::visitStructMemNoInit(StructMemNoInit *p)
+void PrintAbsyn::visitClassMem(ClassMem *p)
 {
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
@@ -230,16 +248,17 @@ void PrintAbsyn::visitStructMemNoInit(StructMemNoInit *p)
   try_to_end(p, p->line_number);
 }
 
-void PrintAbsyn::visitStructMemInit(StructMemInit *p)
+void PrintAbsyn::visitClassFun(ClassFun *p)
 {
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
 
   _i_ = 0; p->type_->accept(this);
   visitIdent(p->ident_);
-  render('=');
-  _i_ = 0; p->expr_->accept(this);
-  render(';');
+  render('(');
+  if(p->listarg_) {_i_ = 0; p->listarg_->accept(this);}
+  render(')');
+  _i_ = 0; p->block_->accept(this);
 
   if (oldi > 0) render(_R_PAREN);
 
@@ -247,14 +266,13 @@ void PrintAbsyn::visitStructMemInit(StructMemInit *p)
   try_to_end(p, p->line_number);
 }
 
-void PrintAbsyn::visitListStructMember(ListStructMember *liststructmember)
+void PrintAbsyn::visitListClassMember(ListClassMember *listclassmember)
 {
-  for (ListStructMember::const_iterator i = liststructmember->begin() ; i != liststructmember->end() ; ++i)
+  for (ListClassMember::const_iterator i = listclassmember->begin() ; i != listclassmember->end() ; ++i)
   {
     (*i)->accept(this);
-    if (i != liststructmember->end() - 1) render((char*)"");
+    if (i != listclassmember->end() - 1) render((char*)"");
   }
-
 }
 
 void PrintAbsyn::visitIdentExpan(IdentExpan *p) {} //abstract class
@@ -406,7 +424,7 @@ void PrintAbsyn::visitAss(Ass *p)
   try_to_end(p, p->line_number);
 }
 
-void PrintAbsyn::visitNewStruct(NewStruct *p)
+void PrintAbsyn::visitNewClass(NewClass *p)
 {
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
@@ -579,7 +597,7 @@ void PrintAbsyn::visitInit(Init *p)
   try_to_end(p, p->line_number);
 }
 
-void PrintAbsyn::visitInitStruct(InitStruct *p)
+void PrintAbsyn::visitInitClass(InitClass *p)
 {
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
@@ -658,7 +676,7 @@ void PrintAbsyn::visitVoid(Void *p)
   try_to_end(p, p->line_number);
 }
 
-void PrintAbsyn::visitStruct(Struct *p)
+void PrintAbsyn::visitClass(Class *p)
 {
   int oldi = _i_;
   if (oldi > 0) render(_L_PAREN);
@@ -772,7 +790,7 @@ void PrintAbsyn::visitEApp(EApp *p)
   int oldi = _i_;
   if (oldi > 6) render(_L_PAREN);
 
-  visitIdent(p->ident_);
+  _i_ = 0; p->identexpan_->accept(this);
   render('(');
   if(p->listexpr_) {_i_ = 0; p->listexpr_->accept(this);}
   render(')');

@@ -104,190 +104,244 @@ FnDef *FnDef::clone() const
 
 
 
-/********************   StructDef    ********************/
-StructDef::StructDef(Ident p1, ListStructMember *p2)
+/********************   ClassDefNoInherit    ********************/
+ClassDefNoInherit::ClassDefNoInherit(Ident p1, ListClassMember *p2)
 {
   ident_ = p1;
-  liststructmember_ = p2;
+  listclassmember_ = p2;
 
 }
 
-StructDef::StructDef(const StructDef & other)
+ClassDefNoInherit::ClassDefNoInherit(const ClassDefNoInherit & other)
 {
   ident_ = other.ident_;
-  liststructmember_ = other.liststructmember_->clone();
+  listclassmember_ = other.listclassmember_->clone();
 
 }
 
-StructDef &StructDef::operator=(const StructDef & other)
+ClassDefNoInherit &ClassDefNoInherit::operator=(const ClassDefNoInherit & other)
 {
-  StructDef tmp(other);
+  ClassDefNoInherit tmp(other);
   swap(tmp);
   return *this;
 }
 
-void StructDef::swap(StructDef & other)
+void ClassDefNoInherit::swap(ClassDefNoInherit & other)
 {
   std::swap(ident_, other.ident_);
-  std::swap(liststructmember_, other.liststructmember_);
+  std::swap(listclassmember_, other.listclassmember_);
 
 }
 
-StructDef::~StructDef()
+ClassDefNoInherit::~ClassDefNoInherit()
 {
-  delete(liststructmember_);
+  delete(listclassmember_);
 
 }
 
-void StructDef::accept(Visitor *v)
+void ClassDefNoInherit::accept(Visitor *v)
 {
-  v->visitStructDef(this);
+  v->visitClassDefNoInherit(this);
 }
 
-StructDef *StructDef::clone() const
+ClassDefNoInherit *ClassDefNoInherit::clone() const
 {
-  return new StructDef(*this);
+  return new ClassDefNoInherit(*this);
 }
 
 
 
-/********************   EmptyStructDef    ********************/
-EmptyStructDef::EmptyStructDef(Ident p1)
+/********************   ClassDefInherit    ********************/
+ClassDefInherit::ClassDefInherit(Ident p1, Ident p2, ListClassMember *p3)
+{
+  ident_1 = p1;
+  ident_2 = p2;
+  listclassmember_ = p3;
+
+}
+
+ClassDefInherit::ClassDefInherit(const ClassDefInherit & other)
+{
+  ident_1 = other.ident_1;
+  ident_2 = other.ident_2;
+  listclassmember_ = other.listclassmember_->clone();
+
+}
+
+ClassDefInherit &ClassDefInherit::operator=(const ClassDefInherit & other)
+{
+  ClassDefInherit tmp(other);
+  swap(tmp);
+  return *this;
+}
+
+void ClassDefInherit::swap(ClassDefInherit & other)
+{
+  std::swap(ident_1, other.ident_1);
+  std::swap(ident_2, other.ident_2);
+  std::swap(listclassmember_, other.listclassmember_);
+
+}
+
+ClassDefInherit::~ClassDefInherit()
+{
+  delete(listclassmember_);
+
+}
+
+void ClassDefInherit::accept(Visitor *v)
+{
+  v->visitClassDefInherit(this);
+}
+
+ClassDefInherit *ClassDefInherit::clone() const
+{
+  return new ClassDefInherit(*this);
+}
+
+
+
+/********************   EmptyClassDef    ********************/
+EmptyClassDef::EmptyClassDef(Ident p1)
 {
   ident_ = p1;
 
 }
 
-EmptyStructDef::EmptyStructDef(const EmptyStructDef & other)
+EmptyClassDef::EmptyClassDef(const EmptyClassDef & other)
 {
   ident_ = other.ident_;
 
 }
 
-EmptyStructDef &EmptyStructDef::operator=(const EmptyStructDef & other)
+EmptyClassDef &EmptyClassDef::operator=(const EmptyClassDef & other)
 {
-  EmptyStructDef tmp(other);
+  EmptyClassDef tmp(other);
   swap(tmp);
   return *this;
 }
 
-void EmptyStructDef::swap(EmptyStructDef & other)
+void EmptyClassDef::swap(EmptyClassDef & other)
 {
   std::swap(ident_, other.ident_);
 
 }
 
-EmptyStructDef::~EmptyStructDef()
+EmptyClassDef::~EmptyClassDef()
 {
 
 }
 
-void EmptyStructDef::accept(Visitor *v)
+void EmptyClassDef::accept(Visitor *v)
 {
-  v->visitEmptyStructDef(this);
+  v->visitEmptyClassDef(this);
 }
 
-EmptyStructDef *EmptyStructDef::clone() const
+EmptyClassDef *EmptyClassDef::clone() const
 {
-  return new EmptyStructDef(*this);
+  return new EmptyClassDef(*this);
 }
 
 
 
-/********************   StructMemNoInit    ********************/
-StructMemNoInit::StructMemNoInit(Type *p1, Ident p2)
+/********************   ClassMem    ********************/
+ClassMem::ClassMem(Type *p1, Ident p2)
 {
   type_ = p1;
   ident_ = p2;
 
 }
 
-StructMemNoInit::StructMemNoInit(const StructMemNoInit & other)
+ClassMem::ClassMem(const ClassMem & other)
 {
   type_ = other.type_->clone();
   ident_ = other.ident_;
 
 }
 
-StructMemNoInit &StructMemNoInit::operator=(const StructMemNoInit & other)
+ClassMem &ClassMem::operator=(const ClassMem & other)
 {
-  StructMemNoInit tmp(other);
+  ClassMem tmp(other);
   swap(tmp);
   return *this;
 }
 
-void StructMemNoInit::swap(StructMemNoInit & other)
+void ClassMem::swap(ClassMem & other)
 {
   std::swap(type_, other.type_);
   std::swap(ident_, other.ident_);
 
 }
 
-StructMemNoInit::~StructMemNoInit()
+ClassMem::~ClassMem()
 {
   delete(type_);
 
 }
 
-void StructMemNoInit::accept(Visitor *v)
+void ClassMem::accept(Visitor *v)
 {
-  v->visitStructMemNoInit(this);
+  v->visitClassMem(this);
 }
 
-StructMemNoInit *StructMemNoInit::clone() const
+ClassMem *ClassMem::clone() const
 {
-  return new StructMemNoInit(*this);
+  return new ClassMem(*this);
 }
 
 
 
-/********************   StructMemInit    ********************/
-StructMemInit::StructMemInit(Type *p1, Ident p2, Expr *p3)
+/********************   ClassFun    ********************/
+ClassFun::ClassFun(Type *p1, Ident p2, ListArg *p3, Block *p4)
 {
   type_ = p1;
   ident_ = p2;
-  expr_ = p3;
+  listarg_ = p3;
+  block_ = p4;
 
 }
 
-StructMemInit::StructMemInit(const StructMemInit & other)
+ClassFun::ClassFun(const ClassFun & other)
 {
   type_ = other.type_->clone();
   ident_ = other.ident_;
-  expr_ = other.expr_->clone();
+  listarg_ = other.listarg_->clone();
+  block_ = other.block_->clone();
 
 }
 
-StructMemInit &StructMemInit::operator=(const StructMemInit & other)
+ClassFun &ClassFun::operator=(const ClassFun & other)
 {
-  StructMemInit tmp(other);
+  ClassFun tmp(other);
   swap(tmp);
   return *this;
 }
 
-void StructMemInit::swap(StructMemInit & other)
+void ClassFun::swap(ClassFun & other)
 {
   std::swap(type_, other.type_);
   std::swap(ident_, other.ident_);
-  std::swap(expr_, other.expr_);
+  std::swap(listarg_, other.listarg_);
+  std::swap(block_, other.block_);
 
 }
 
-StructMemInit::~StructMemInit()
+ClassFun::~ClassFun()
 {
   delete(type_);
-  delete(expr_);
+  delete(listarg_);
+  delete(block_);
 
 }
 
-void StructMemInit::accept(Visitor *v)
+void ClassFun::accept(Visitor *v)
 {
-  v->visitStructMemInit(this);
+  v->visitClassFun(this);
 }
 
-StructMemInit *StructMemInit::clone() const
+ClassFun *ClassFun::clone() const
 {
-  return new StructMemInit(*this);
+  return new ClassFun(*this);
 }
 
 
@@ -655,49 +709,49 @@ Ass *Ass::clone() const
 
 
 
-/********************   NewStruct    ********************/
-NewStruct::NewStruct(IdentExpan *p1, Ident p2)
+/********************   NewClass    ********************/
+NewClass::NewClass(IdentExpan *p1, Ident p2)
 {
   identexpan_ = p1;
   ident_ = p2;
 
 }
 
-NewStruct::NewStruct(const NewStruct & other)
+NewClass::NewClass(const NewClass & other)
 {
   identexpan_ = other.identexpan_->clone();
   ident_ = other.ident_;
 
 }
 
-NewStruct &NewStruct::operator=(const NewStruct & other)
+NewClass &NewClass::operator=(const NewClass & other)
 {
-  NewStruct tmp(other);
+  NewClass tmp(other);
   swap(tmp);
   return *this;
 }
 
-void NewStruct::swap(NewStruct & other)
+void NewClass::swap(NewClass & other)
 {
   std::swap(identexpan_, other.identexpan_);
   std::swap(ident_, other.ident_);
 
 }
 
-NewStruct::~NewStruct()
+NewClass::~NewClass()
 {
   delete(identexpan_);
 
 }
 
-void NewStruct::accept(Visitor *v)
+void NewClass::accept(Visitor *v)
 {
-  v->visitNewStruct(this);
+  v->visitNewClass(this);
 }
 
-NewStruct *NewStruct::clone() const
+NewClass *NewClass::clone() const
 {
-  return new NewStruct(*this);
+  return new NewClass(*this);
 }
 
 
@@ -1156,48 +1210,48 @@ Init *Init::clone() const
 
 
 
-/********************   InitStruct    ********************/
-InitStruct::InitStruct(Ident p1, Ident p2)
+/********************   InitClass    ********************/
+InitClass::InitClass(Ident p1, Ident p2)
 {
   ident_1 = p1;
   ident_2 = p2;
 
 }
 
-InitStruct::InitStruct(const InitStruct & other)
+InitClass::InitClass(const InitClass & other)
 {
   ident_1 = other.ident_1;
   ident_2 = other.ident_2;
 
 }
 
-InitStruct &InitStruct::operator=(const InitStruct & other)
+InitClass &InitClass::operator=(const InitClass & other)
 {
-  InitStruct tmp(other);
+  InitClass tmp(other);
   swap(tmp);
   return *this;
 }
 
-void InitStruct::swap(InitStruct & other)
+void InitClass::swap(InitClass & other)
 {
   std::swap(ident_1, other.ident_1);
   std::swap(ident_2, other.ident_2);
 
 }
 
-InitStruct::~InitStruct()
+InitClass::~InitClass()
 {
 
 }
 
-void InitStruct::accept(Visitor *v)
+void InitClass::accept(Visitor *v)
 {
-  v->visitInitStruct(this);
+  v->visitInitClass(this);
 }
 
-InitStruct *InitStruct::clone() const
+InitClass *InitClass::clone() const
 {
-  return new InitStruct(*this);
+  return new InitClass(*this);
 }
 
 
@@ -1362,45 +1416,45 @@ Void *Void::clone() const
 
 
 
-/********************   Struct    ********************/
-Struct::Struct(Ident p1)
+/********************   Class    ********************/
+Class::Class(Ident p1)
 {
   ident_ = p1;
 
 }
 
-Struct::Struct(const Struct & other)
+Class::Class(const Class & other)
 {
   ident_ = other.ident_;
 
 }
 
-Struct &Struct::operator=(const Struct & other)
+Class &Class::operator=(const Class & other)
 {
-  Struct tmp(other);
+  Class tmp(other);
   swap(tmp);
   return *this;
 }
 
-void Struct::swap(Struct & other)
+void Class::swap(Class & other)
 {
   std::swap(ident_, other.ident_);
 
 }
 
-Struct::~Struct()
+Class::~Class()
 {
 
 }
 
-void Struct::accept(Visitor *v)
+void Class::accept(Visitor *v)
 {
-  v->visitStruct(this);
+  v->visitClass(this);
 }
 
-Struct *Struct::clone() const
+Class *Class::clone() const
 {
-  return new Struct(*this);
+  return new Class(*this);
 }
 
 
@@ -1665,16 +1719,16 @@ ELitFalse *ELitFalse::clone() const
 
 
 /********************   EApp    ********************/
-EApp::EApp(Ident p1, ListExpr *p2)
+EApp::EApp(IdentExpan *p1, ListExpr *p2)
 {
-  ident_ = p1;
+  identexpan_ = p1;
   listexpr_ = p2;
 
 }
 
 EApp::EApp(const EApp & other)
 {
-  ident_ = other.ident_;
+  identexpan_ = other.identexpan_->clone();
   listexpr_ = other.listexpr_->clone();
 
 }
@@ -1688,13 +1742,14 @@ EApp &EApp::operator=(const EApp & other)
 
 void EApp::swap(EApp & other)
 {
-  std::swap(ident_, other.ident_);
+  std::swap(identexpan_, other.identexpan_);
   std::swap(listexpr_, other.listexpr_);
 
 }
 
 EApp::~EApp()
 {
+  delete(identexpan_);
   delete(listexpr_);
 
 }
@@ -2535,17 +2590,17 @@ NE *NE::clone() const
 
 
 
-/********************   ListStructMember    ********************/
+/********************   ListClassMember    ********************/
 
-void ListStructMember::accept(Visitor *v)
+void ListClassMember::accept(Visitor *v)
 {
-  v->visitListStructMember(this);
+  v->visitListClassMember(this);
 }
 
 
-ListStructMember *ListStructMember::clone() const
+ListClassMember *ListClassMember::clone() const
 {
-  return new ListStructMember(*this);
+  return new ListClassMember(*this);
 }
 
 
