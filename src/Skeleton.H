@@ -29,7 +29,9 @@ public:
   void visitClassDefInherit(ClassDefInherit *p);
   void visitEmptyClassDef(EmptyClassDef *p);
   void visitIdentExp(IdentExp *p);
+  void visitIdentExpFun(IdentExpFun *p);
   void visitIdentExpSimple(IdentExpSimple *p);
+  void visitIdentExpSimpleFun(IdentExpSimpleFun *p);
   void visitArgDef(ArgDef *p);
   void visitBlockDef(BlockDef *p);
   void visitEmpty(Empty *p);
@@ -37,9 +39,7 @@ public:
   void visitDecl(Decl *p);
   void visitNoInit(NoInit *p);
   void visitInit(Init *p);
-  void visitInitClass(InitClass *p);
   void visitAss(Ass *p);
-  void visitNewClass(NewClass *p);
   void visitIncr(Incr *p);
   void visitDecr(Decr *p);
   void visitRet(Ret *p);
@@ -55,11 +55,11 @@ public:
   void visitClass(Class *p);
   void visitFun(Fun *p);
   void visitENullCast(ENullCast *p);
+  void visitENewClass(ENewClass *p);
   void visitEVar(EVar *p);
   void visitELitInt(ELitInt *p);
   void visitELitTrue(ELitTrue *p);
   void visitELitFalse(ELitFalse *p);
-  void visitEApp(EApp *p);
   void visitEString(EString *p);
   void visitNeg(Neg *p);
   void visitNot(Not *p);

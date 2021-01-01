@@ -211,6 +211,8 @@ void StaticAnalyzer::visitClassDefInherit(ClassDefInherit *p) {
         fail("member" + new_member->ident_ + " was already present\n", new_member);
       if(new_member->ident_ == "self")
         fail("self is a reserved keyword\n", new_member);
+      if(is_there_a_member(p->ident_2, new_member->ident_, env_of_structures, env_of_classes).has_value())
+        fail("overshadowed member " + new_member->ident_ + "\n", new_member);
 
       present_args.insert(new_member->ident_);
     }
@@ -285,12 +287,48 @@ void StaticAnalyzer::visitIdentExp(IdentExp *p) {
   last_evaluated_expr = member.value();
 }
 
+void StaticAnalyzer::visitIdentExpFun(IdentExpFun *p) {
+  if(p->identexpan_)
+    p->identexpan_->accept(this);
+  
+  auto class_type = last_evaluated_expr;
+  auto function = is_there_a_function(class_type, p->ident_, env_of_classes);
+
+  if(!function.has_value())
+    fail("class " + last_evaluated_expr + " and it's ancestors does not have a class function " + p->ident_, p);
+
+  auto expected_arg_types = function.value().first;
+  if(p->listexpr_->size() != expected_arg_types.size()) 
+    fail("function " + p->ident_ + " was supplied " + to_string(p->listexpr_->size()) + " arguments but needed " + to_string(expected_arg_types.size()) + "\n", p);
+
+  for(int i = 0; i < p->listexpr_->size(); i++) {
+    (*(p->listexpr_))[i]->accept(this);
+    check_for_type_matching(expected_arg_types[i], last_evaluated_expr, env_of_classes, p);
+  }
+  last_evaluated_expr = function.value().second;
+  last_evaluated_expr_value = DECOY;
+}
+
 void StaticAnalyzer::visitIdentExpSimple(IdentExpSimple *p) {
   check_for_existence(p->ident_, &env_of_vars, p);
   last_evaluated_expr = env_of_vars[p->ident_];
   last_evaluated_expr_value = DECOY;
 
   p->my_type_ = env_of_vars[p->ident_];
+}
+
+void StaticAnalyzer::visitIdentExpSimpleFun(IdentExpSimpleFun *p) {
+  check_for_existence(p->ident_, &env_of_functions, p);
+  auto expected_arg_types = env_of_functions[p->ident_].first;
+  if(p->listexpr_->size() != expected_arg_types.size()) 
+    fail("function " + p->ident_ + " was supplied " + to_string(p->listexpr_->size()) + " arguments but needed " + to_string(expected_arg_types.size()) + "\n", p);
+
+  for(int i = 0; i < p->listexpr_->size(); i++) {
+    (*(p->listexpr_))[i]->accept(this);
+    check_for_type_matching(expected_arg_types[i], last_evaluated_expr, p);
+  }
+  last_evaluated_expr = env_of_functions[p->ident_].second;
+  last_evaluated_expr_value = DECOY;
 }
 
 
@@ -464,29 +502,31 @@ void StaticAnalyzer::visitDecl(Decl *p)
         same_scope_redefinition(init->ident_, &defined_in_current_scope, init);
         
         init->expr_->accept(this);
-        check_for_type_matching(get_type(p->type_), last_evaluated_expr, init);
+
         defined_in_current_scope.insert(init->ident_);
-        env_of_vars[init->ident_] = get_type(p->type_);
-      }
-      if(auto init = dynamic_cast<InitClass*>(*i)) {
-        same_scope_redefinition(init->ident_1, &defined_in_current_scope, init);
+        if(is_a_basic_type(p->type_)) {
+          check_for_type_matching(get_type(p->type_), last_evaluated_expr, init);
+          env_of_vars[init->ident_] = get_type(p->type_);
+        }
+        else {
+          if(!is_an_ancestor_type(last_evaluated_expr, get_type(p->type_), env_of_classes))
+            fail(init->ident_ + " was declared as a " + get_type(p->type_) + " but was assigned a new " + last_evaluated_expr + "\n", init);
         
-        // if(get_type(p->type_) != init->ident_2) 
-        if(!is_an_ancestor_type(init->ident_2, get_type(p->type_), env_of_classes))
-          fail(init->ident_1 + " was declared as a " + get_type(p->type_) + " but was assigned a new " + init->ident_2 + "\n", init);
-        
-        defined_in_current_scope.insert(init->ident_1);
-        env_of_vars[init->ident_1] = init->ident_2;
+            env_of_vars[init->ident_] = last_evaluated_expr;
+        }
       }
+      // if(auto init = dynamic_cast<InitClass*>(*i)) {
+      //   same_scope_redefinition(init->ident_1, &defined_in_current_scope, init);
+        
+      //   // if(get_type(p->type_) != init->ident_2) 
+      //   if(!is_an_ancestor_type(init->ident_2, get_type(p->type_), env_of_classes))
+      //     fail(init->ident_1 + " was declared as a " + get_type(p->type_) + " but was assigned a new " + init->ident_2 + "\n", init);
+        
+      //   defined_in_current_scope.insert(init->ident_1);
+      //   env_of_vars[init->ident_1] = init->ident_2;
+      // }
     }
   }
-}
-
-void StaticAnalyzer::visitNewClass(NewClass *p) {
-  // Here identexpan_ is a id of a variable
-  // And ident_ is a name of the struct
-  p->identexpan_->accept(this);
-  check_for_type_matching(p->ident_, last_evaluated_expr, p);
 }
 
 
@@ -495,11 +535,11 @@ void StaticAnalyzer::visitAss(Ass *p)
   p->identexpan_->accept(this);
   auto var_type = last_evaluated_expr;
   p->expr_->accept(this);
-  // if(is_a_basic_type(var_type))
-  check_for_type_matching(var_type, last_evaluated_expr, env_of_classes ,p);
-  // else 
-  //   if(!is_an_ancestor_type(last_evaluated_expr, var_type, env_of_classes))
-  //     fail(identExpToString(*p->identexpan_) + " was declared as a " + var_type + " but was assigned a new " + last_evaluated_expr + "\n", p);
+  if(is_a_basic_type(var_type))
+    check_for_type_matching(var_type, last_evaluated_expr, env_of_classes ,p);
+  else 
+    if(!is_an_ancestor_type(last_evaluated_expr, var_type, env_of_classes))
+      fail(identExpToString(*p->identexpan_) + " was declared as a " + var_type + " but was assigned a new " + last_evaluated_expr + "\n", p);
 
 }
 
@@ -625,10 +665,6 @@ void StaticAnalyzer::visitNoInit(NoInit *p)
 {  
 }
 
-void StaticAnalyzer::visitInitClass(InitClass *p) {
-
-}
-
 void StaticAnalyzer::visitInit(Init *p)
 {
 }
@@ -681,6 +717,13 @@ void StaticAnalyzer::visitENullCast(ENullCast *p) {
   p->expr_type_ = last_evaluated_expr;
 }
 
+void StaticAnalyzer::visitENewClass(ENewClass *p) {
+  last_evaluated_expr = get_type(p->type_);
+  last_evaluated_expr_value = DECOY;
+
+  p->expr_type_ = last_evaluated_expr;
+}
+
 void StaticAnalyzer::visitEVar(EVar *p)
 {
   p->identexpan_->accept(this);
@@ -709,48 +752,6 @@ void StaticAnalyzer::visitELitFalse(ELitFalse *p)
 {
   last_evaluated_expr = TYPE_BOOLEAN;
   last_evaluated_expr_value = false;
-
-  p->expr_type_ = last_evaluated_expr;
-}
-
-void StaticAnalyzer::visitEApp(EApp *p)
-{
-  if(auto simple_ident = dynamic_cast<IdentExpSimple*>(p->identexpan_)) {
-    auto ident = simple_ident->ident_;
-    
-    check_for_existence(ident, &env_of_functions, p);
-    auto expected_arg_types = env_of_functions[ident].first;
-    if(p->listexpr_->size() != expected_arg_types.size()) 
-      fail("function " + ident + " was supplied " + to_string(p->listexpr_->size()) + " arguments but needed " + to_string(expected_arg_types.size()) + "\n", p);
-
-    for(int i = 0; i < p->listexpr_->size(); i++) {
-      (*(p->listexpr_))[i]->accept(this);
-      check_for_type_matching(expected_arg_types[i], last_evaluated_expr, p);
-    }
-    last_evaluated_expr = env_of_functions[ident].second;
-    last_evaluated_expr_value = DECOY;
-  }
-  if(auto complex_ident = dynamic_cast<IdentExp*>(p->identexpan_)) {
-    auto fn_ident = complex_ident->ident_;
-    (complex_ident->identexpan_)->accept(this);
-    auto class_type = last_evaluated_expr;
-
-    auto function = is_there_a_function(class_type, fn_ident, env_of_classes);
-
-    if(!function.has_value())
-      fail("class " + last_evaluated_expr + " and it's ancestors does not have a class function " + fn_ident, complex_ident);
-
-    auto expected_arg_types = function.value().first;
-    if(p->listexpr_->size() != expected_arg_types.size()) 
-      fail("function " + fn_ident + " was supplied " + to_string(p->listexpr_->size()) + " arguments but needed " + to_string(expected_arg_types.size()) + "\n", p);
-
-    for(int i = 0; i < p->listexpr_->size(); i++) {
-      (*(p->listexpr_))[i]->accept(this);
-      check_for_type_matching(expected_arg_types[i], last_evaluated_expr, env_of_classes, p);
-    }
-    last_evaluated_expr = function.value().second;
-    last_evaluated_expr_value = DECOY;
-  }
 
   p->expr_type_ = last_evaluated_expr;
 }

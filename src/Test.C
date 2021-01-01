@@ -55,7 +55,7 @@ int main(int argc, char ** argv)
     try {
       p->analyze(parse_tree);
       std::cerr << "OK\n";
-      LLVM *llvm = new LLVM(p->env_of_structures, p->env_of_classes);
+      LLVM *llvm = new LLVM(p->env_of_classes);
       llvm->run(parse_tree);
       exit(0);
     }

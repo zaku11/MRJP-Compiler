@@ -76,10 +76,10 @@ IDENT [a-zA-Z0-9'_]
 <STRING>\\      	 BEGIN ESCAPED;
 <STRING>\"      	 yylval.string_ = strdup(YY_PARSED_STRING); YY_BUFFER_RESET(); BEGIN YYINITIAL; return _STRING_;
 <STRING>.      	 YY_BUFFER_APPEND(yytext);
-<ESCAPED>n      	 YY_BUFFER_APPEND("\n"); BEGIN STRING;
-<ESCAPED>\"      	 YY_BUFFER_APPEND("\""); BEGIN STRING ;
-<ESCAPED>\\      	 YY_BUFFER_APPEND("\\"); BEGIN STRING;
-<ESCAPED>t       	 YY_BUFFER_APPEND("\t"); BEGIN STRING;
+<ESCAPED>n      	 YY_BUFFER_APPEND((char*)"\n"); BEGIN STRING;
+<ESCAPED>\"      	 YY_BUFFER_APPEND((char*)"\""); BEGIN STRING ;
+<ESCAPED>\\      	 YY_BUFFER_APPEND((char*)"\\"); BEGIN STRING;
+<ESCAPED>t       	 YY_BUFFER_APPEND((char*)"\t"); BEGIN STRING;
 <ESCAPED>.       	 YY_BUFFER_APPEND(yytext); BEGIN STRING;
 <YYINITIAL>{DIGIT}+      	 yylval.int_ = atoi(yytext); return _INTEGER_;
 <YYINITIAL>{LETTER}{IDENT}*      	 yylval.string_ = strdup(yytext); return _IDENT_;

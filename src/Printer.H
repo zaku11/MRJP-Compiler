@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <exception>
 
 /* Certain applications may improve performance by changing the buffer size */
 #define BUFFER_INITIAL 2000
@@ -54,7 +53,9 @@ void render(char *s);
   void visitListClassMember(ListClassMember *p);
   void visitIdentExpan(IdentExpan *p); /* abstract class */
   void visitIdentExp(IdentExp *p);
+  void visitIdentExpFun(IdentExpFun *p);
   void visitIdentExpSimple(IdentExpSimple *p);
+  void visitIdentExpSimpleFun(IdentExpSimpleFun *p);
   void visitListTopDef(ListTopDef *p);
   void visitArg(Arg *p); /* abstract class */
   void visitArgDef(ArgDef *p);
@@ -67,7 +68,6 @@ void render(char *s);
   void visitBStmt(BStmt *p);
   void visitDecl(Decl *p);
   void visitAss(Ass *p);
-  void visitNewClass(NewClass *p);
   void visitIncr(Incr *p);
   void visitDecr(Decr *p);
   void visitRet(Ret *p);
@@ -79,7 +79,6 @@ void render(char *s);
   void visitItem(Item *p); /* abstract class */
   void visitNoInit(NoInit *p);
   void visitInit(Init *p);
-  void visitInitClass(InitClass *p);
   void visitListItem(ListItem *p);
   void visitType(Type *p); /* abstract class */
   void visitInt(Int *p);
@@ -91,11 +90,11 @@ void render(char *s);
   void visitListType(ListType *p);
   void visitExpr(Expr *p); /* abstract class */
   void visitENullCast(ENullCast *p);
+  void visitENewClass(ENewClass *p);
   void visitEVar(EVar *p);
   void visitELitInt(ELitInt *p);
   void visitELitTrue(ELitTrue *p);
   void visitELitFalse(ELitFalse *p);
-  void visitEApp(EApp *p);
   void visitEString(EString *p);
   void visitNeg(Neg *p);
   void visitNot(Not *p);

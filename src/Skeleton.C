@@ -97,11 +97,30 @@ void Skeleton::visitIdentExp(IdentExp *ident_exp)
 
 }
 
+void Skeleton::visitIdentExpFun(IdentExpFun *ident_exp_fun)
+{
+  /* Code For IdentExpFun Goes Here */
+
+  ident_exp_fun->identexpan_->accept(this);
+  visitIdent(ident_exp_fun->ident_);
+  ident_exp_fun->listexpr_->accept(this);
+
+}
+
 void Skeleton::visitIdentExpSimple(IdentExpSimple *ident_exp_simple)
 {
   /* Code For IdentExpSimple Goes Here */
 
   visitIdent(ident_exp_simple->ident_);
+
+}
+
+void Skeleton::visitIdentExpSimpleFun(IdentExpSimpleFun *ident_exp_simple_fun)
+{
+  /* Code For IdentExpSimpleFun Goes Here */
+
+  visitIdent(ident_exp_simple_fun->ident_);
+  ident_exp_simple_fun->listexpr_->accept(this);
 
 }
 
@@ -152,15 +171,6 @@ void Skeleton::visitAss(Ass *ass)
 
   ass->identexpan_->accept(this);
   ass->expr_->accept(this);
-
-}
-
-void Skeleton::visitNewClass(NewClass *new_class)
-{
-  /* Code For NewClass Goes Here */
-
-  new_class->identexpan_->accept(this);
-  visitIdent(new_class->ident_);
 
 }
 
@@ -248,15 +258,6 @@ void Skeleton::visitInit(Init *init)
 
 }
 
-void Skeleton::visitInitClass(InitClass *init_class)
-{
-  /* Code For InitClass Goes Here */
-
-  visitIdent(init_class->ident_1);
-  visitIdent(init_class->ident_2);
-
-}
-
 void Skeleton::visitInt(Int *int_)
 {
   /* Code For Int Goes Here */
@@ -310,6 +311,14 @@ void Skeleton::visitENullCast(ENullCast *e_null_cast)
 
 }
 
+void Skeleton::visitENewClass(ENewClass *e_new_struct)
+{
+  /* Code For ENewClass Goes Here */
+
+  e_new_struct->type_->accept(this);
+
+}
+
 void Skeleton::visitEVar(EVar *e_var)
 {
   /* Code For EVar Goes Here */
@@ -337,15 +346,6 @@ void Skeleton::visitELitFalse(ELitFalse *e_lit_false)
 {
   /* Code For ELitFalse Goes Here */
 
-
-}
-
-void Skeleton::visitEApp(EApp *e_app)
-{
-  /* Code For EApp Goes Here */
-
-  e_app->identexpan_->accept(this);
-  e_app->listexpr_->accept(this);
 
 }
 

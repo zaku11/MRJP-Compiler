@@ -40,7 +40,9 @@ class ClassDefNoInherit;
 class ClassDefInherit;
 class EmptyClassDef;
 class IdentExp;
+class IdentExpFun;
 class IdentExpSimple;
+class IdentExpSimpleFun;
 class ArgDef;
 class BlockDef;
 class Empty;
@@ -48,9 +50,7 @@ class BStmt;
 class Decl;
 class NoInit;
 class Init;
-class InitClass;
 class Ass;
-class NewClass;
 class Incr;
 class Decr;
 class Ret;
@@ -66,11 +66,11 @@ class Void;
 class Class;
 class Fun;
 class ENullCast;
+class ENewClass;
 class EVar;
 class ELitInt;
 class ELitTrue;
 class ELitFalse;
-class EApp;
 class EString;
 class Neg;
 class Not;
@@ -125,7 +125,9 @@ public:
   virtual void visitClassDefInherit(ClassDefInherit *p) = 0;
   virtual void visitEmptyClassDef(EmptyClassDef *p) = 0;
   virtual void visitIdentExp(IdentExp *p) = 0;
+  virtual void visitIdentExpFun(IdentExpFun *p) = 0;
   virtual void visitIdentExpSimple(IdentExpSimple *p) = 0;
+  virtual void visitIdentExpSimpleFun(IdentExpSimpleFun *p) = 0;
   virtual void visitArgDef(ArgDef *p) = 0;
   virtual void visitBlockDef(BlockDef *p) = 0;
   virtual void visitEmpty(Empty *p) = 0;
@@ -133,9 +135,7 @@ public:
   virtual void visitDecl(Decl *p) = 0;
   virtual void visitNoInit(NoInit *p) = 0;
   virtual void visitInit(Init *p) = 0;
-  virtual void visitInitClass(InitClass *p) = 0;
   virtual void visitAss(Ass *p) = 0;
-  virtual void visitNewClass(NewClass *p) = 0;
   virtual void visitIncr(Incr *p) = 0;
   virtual void visitDecr(Decr *p) = 0;
   virtual void visitRet(Ret *p) = 0;
@@ -151,11 +151,11 @@ public:
   virtual void visitClass(Class *p) = 0;
   virtual void visitFun(Fun *p) = 0;
   virtual void visitENullCast(ENullCast *p) = 0;
+  virtual void visitENewClass(ENewClass *p) = 0;
   virtual void visitEVar(EVar *p) = 0;
   virtual void visitELitInt(ELitInt *p) = 0;
   virtual void visitELitTrue(ELitTrue *p) = 0;
   virtual void visitELitFalse(ELitFalse *p) = 0;
-  virtual void visitEApp(EApp *p) = 0;
   virtual void visitEString(EString *p) = 0;
   virtual void visitNeg(Neg *p) = 0;
   virtual void visitNot(Not *p) = 0;
@@ -421,6 +421,22 @@ public:
   void swap(IdentExp &);
 };
 
+class IdentExpFun : public IdentExpan
+{
+public:
+  IdentExpan *identexpan_;
+  Ident ident_;
+  ListExpr *listexpr_;
+
+  IdentExpFun(const IdentExpFun &);
+  IdentExpFun &operator=(const IdentExpFun &);
+  IdentExpFun(IdentExpan *p1, Ident p2, ListExpr *p3);
+  ~IdentExpFun();
+  virtual void accept(Visitor *v);
+  virtual IdentExpFun *clone() const;
+  void swap(IdentExpFun &);
+};
+
 class IdentExpSimple : public IdentExpan
 {
 public:
@@ -434,6 +450,21 @@ public:
   virtual void accept(Visitor *v);
   virtual IdentExpSimple *clone() const;
   void swap(IdentExpSimple &);
+};
+
+class IdentExpSimpleFun : public IdentExpan
+{
+public:
+  Ident ident_;
+  ListExpr *listexpr_;
+
+  IdentExpSimpleFun(const IdentExpSimpleFun &);
+  IdentExpSimpleFun &operator=(const IdentExpSimpleFun &);
+  IdentExpSimpleFun(Ident p1, ListExpr *p2);
+  ~IdentExpSimpleFun();
+  virtual void accept(Visitor *v);
+  virtual IdentExpSimpleFun *clone() const;
+  void swap(IdentExpSimpleFun &);
 };
 
 class ArgDef : public Arg
@@ -520,21 +551,6 @@ public:
   virtual void accept(Visitor *v);
   virtual Ass *clone() const;
   void swap(Ass &);
-};
-
-class NewClass : public Stmt
-{
-public:
-  IdentExpan *identexpan_;
-  Ident ident_;
-
-  NewClass(const NewClass &);
-  NewClass &operator=(const NewClass &);
-  NewClass(IdentExpan *p1, Ident p2);
-  ~NewClass();
-  virtual void accept(Visitor *v);
-  virtual NewClass *clone() const;
-  void swap(NewClass &);
 };
 
 class Incr : public Stmt
@@ -681,21 +697,6 @@ public:
   void swap(Init &);
 };
 
-class InitClass : public Item
-{
-public:
-  Ident ident_1;
-  Ident ident_2;
-
-  InitClass(const InitClass &);
-  InitClass &operator=(const InitClass &);
-  InitClass(Ident p1, Ident p2);
-  ~InitClass();
-  virtual void accept(Visitor *v);
-  virtual InitClass *clone() const;
-  void swap(InitClass &);
-};
-
 class Int : public Type
 {
 public:
@@ -791,6 +792,20 @@ public:
   void swap(ENullCast &);
 };
 
+class ENewClass : public Expr
+{
+public:
+  Type *type_;
+
+  ENewClass(const ENewClass &);
+  ENewClass &operator=(const ENewClass &);
+  ENewClass(Type *p1);
+  ~ENewClass();
+  virtual void accept(Visitor *v);
+  virtual ENewClass *clone() const;
+  void swap(ENewClass &);
+};
+
 class EVar : public Expr
 {
 public:
@@ -843,21 +858,6 @@ public:
   virtual void accept(Visitor *v);
   virtual ELitFalse *clone() const;
   void swap(ELitFalse &);
-};
-
-class EApp : public Expr
-{
-public:
-  IdentExpan *identexpan_;
-  ListExpr *listexpr_;
-
-  EApp(const EApp &);
-  EApp &operator=(const EApp &);
-  EApp(IdentExpan *p1, ListExpr *p2);
-  ~EApp();
-  virtual void accept(Visitor *v);
-  virtual EApp *clone() const;
-  void swap(EApp &);
 };
 
 class EString : public Expr

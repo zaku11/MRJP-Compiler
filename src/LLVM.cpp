@@ -39,6 +39,12 @@ string transform_type_name(Type &type) {
   return "";
 }
 
+string trim_if_class(string type) {
+  if(type[0] == '%')
+    return type.substr(1, type.size() - 2);
+  return type;
+}
+
 string cpp_to_llvm_types(String cpp_type) {
   if(cpp_type == "int") return "i32";
   if(cpp_type == "boolean") return "i1";
@@ -129,10 +135,8 @@ string LLVM::genTmpVar(string text) {
 
 
 
-LLVM::LLVM(StructEnv strEnv, ClassEnv clEnv)
+LLVM::LLVM(ClassEnv clEnv)
 {
-  // TODO
-  // this->env_of_structures = strEnv;
   this->env_of_classes = clEnv;
 }
 
@@ -179,9 +183,7 @@ void LLVM::visitTopDef(TopDef *p) {} //abstract class
 
 void LLVM::visitFnDef(FnDef *p)
 {
-
   string type = transform_type_name(*p->type_);
-  // addToOutput("declare void @printString(i32 %x)\n");
   addToOutput("define " + type + " @" + p->ident_);
   p->listarg_->accept(this);
   addToOutput(" {\n");
@@ -190,7 +192,6 @@ void LLVM::visitFnDef(FnDef *p)
     addToOutput(inject);
     inject = "";
   }
-
 
   for (ListArg::const_iterator i = p->listarg_->begin() ; i != p->listarg_->end() ; ++i)
   {
@@ -242,9 +243,7 @@ void LLVM::visitClassDefInherit(ClassDefInherit *p) {
       }
       auto type_name = transform_type_name(*no_init->type_); 
       addToOutput(type_name);
-      if(type_name[0] == '%') {
-        type_name = type_name.substr(1, type_name.size() - 2);
-      }
+      type_name = trim_if_class(type_name);
       fields[no_init->ident_] = std :: make_pair(type_name, iter);
       iter++;
     }
@@ -400,16 +399,74 @@ void LLVM::visitIdentExp(IdentExp *p) {
 
       current_exp_type = next_type;
   }
-  
-  // TODO
 }
+
+void LLVM::visitIdentExpFun(IdentExpFun *p) {
+
+  p->identexpan_->accept(this);
+  string current_class = current_exp_type;
+
+  while(env_of_classes[current_class].first.find(p->ident_) == env_of_classes[current_class].first.end()) {
+    auto next_class = env_of_classes[current_class].second;
+
+    addToOutput("%i_helper" + to_string(last_var + 1) + " = getelementptr inbounds %" + current_class + ", %" + current_class + "* %i" + to_string(last_var) + ", i32 0, i32 0\n");
+    addToOutput("%i" + to_string(last_var + 1) + " = load %" + next_class + "*, %" + next_class + "** %i_helper" + to_string(last_var + 1) + "\n");
+
+    current_class = next_class;
+    last_var++;
+  }
+  current_exp_type = current_class;
+  auto ans = "%i" + to_string(last_var);
+  auto fn_name = current_exp_type + "_" + p->ident_;
+
+  vector <string> computed_args;
+  for (ListExpr::const_iterator i = p->listexpr_->begin() ; i != p->listexpr_->end() ; ++i)
+  {
+    computed_args.push_back(processSingle(*i));
+  }
+
+  if(!dynamic_cast<Void*>(function_data[fn_name].first)) {
+    addToOutput("%i" + to_string(last_var + 1) + " = ");
+    last_var++;
+  }
+
+  addToOutput("call " + transform_type_name(*function_data[fn_name].first) + " @" + fn_name + "(%" + current_class + "* " + ans);
+  vector<Type*> listarg = function_data[fn_name].second;
+  for (int i = 0 ; i < listarg.size() ; ++i)
+  {
+    addToOutput(", ");
+    addToOutput(transform_type_name(*listarg[i]) + " " + computed_args[i]);
+  }
+  addToOutput(")\n");
+}
+
+
 
 void LLVM::visitIdentExpSimple(IdentExpSimple *p) {
   current_exp_type = p->my_type_;
-  
   addToOutput("%i" + to_string(last_var + 1) + " = load %" + current_exp_type + "*, %" + current_exp_type + "** %" + getCurrentVarNum(p->ident_) + "\n");
   last_var++;
+}
 
+void LLVM::visitIdentExpSimpleFun(IdentExpSimpleFun *p) {
+  vector <string> computed_args;
+  for (ListExpr::const_iterator i = p->listexpr_->begin() ; i != p->listexpr_->end() ; ++i)
+  {
+    computed_args.push_back(processSingle(*i));
+  }
+  if(!dynamic_cast<Void*>(function_data[p->ident_].first)) {
+    addToOutput("%i" + to_string(last_var + 1) + " = ");
+    last_var++;
+  }
+  vector<Type*> listarg = function_data[p->ident_].second;
+  addToOutput("call " + transform_type_name(*function_data[p->ident_].first) + " @" + p->ident_ + "(");
+  for (int i = 0 ; i < listarg.size() ; ++i)
+  {
+    if(i > 0) addToOutput(", ");
+    addToOutput(transform_type_name(*listarg[i]) + " " + computed_args[i]);
+  }
+  addToOutput(")\n");
+  current_exp_type = trim_if_class(transform_type_name(*function_data[p->ident_].first));
 }
 
 
@@ -543,54 +600,54 @@ void LLVM::visitDecl(Decl *p)
       addToOutput("%" + getCurrentVarNum(init->ident_) + " = alloca " + type + "\n");
       addToOutput("store " + type + " " + ans + ", " + type + "* %" + getCurrentVarNum(init->ident_) + "\n");
     }
-    if(auto struct_init = dynamic_cast<InitClass*>(*i)) {
-      auto var_name = struct_init->ident_1;
-      auto struct_name = struct_init->ident_2;
+    // if(auto struct_init = dynamic_cast<InitClass*>(*i)) {
+    //   auto var_name = struct_init->ident_1;
+    //   auto struct_name = struct_init->ident_2;
 
-      current_var_number[var_name] = last_var_numbers[var_name] + 1;
-      last_var_numbers[var_name] += 1;
+    //   current_var_number[var_name] = last_var_numbers[var_name] + 1;
+    //   last_var_numbers[var_name] += 1;
 
-      addToOutput("%" + getCurrentVarNum(var_name) + " = alloca %" + struct_name + "*\n");    
-      auto helper = NewClass{dynamic_cast<IdentExpan*>(new IdentExpSimple(var_name)), struct_name};
-      helper.accept(this);
-    }
+    //   addToOutput("%" + getCurrentVarNum(var_name) + " = alloca %" + struct_name + "*\n");    
+    //   auto helper = NewClass{dynamic_cast<IdentExpan*>(new IdentExpSimple(var_name)), struct_name};
+    //   helper.accept(this);
+    // }
     
   }
 
 }
 
-void LLVM::visitNewClass(NewClass *p) {
-  auto type = "%" + p->ident_ + "*";
-  auto type_no_star = "%" + p->ident_;
+// void LLVM::visitNewClass(NewClass *p) {
+//   auto type = "%" + p->ident_ + "*";
+//   auto type_no_star = "%" + p->ident_;
 
-  // This nifty little snippet will compute how much memory i need to alloc for my structures
-  addToOutput("%Size" + to_string(last_var + 1) + " = getelementptr " + type_no_star + ", " + type + " null, i32 1\n");
-  addToOutput("%Size_" + to_string(last_var + 1) + " = ptrtoint " + type + " %Size" + to_string(last_var + 1) + " to i32" + "\n");
+//   // This nifty little snippet will compute how much memory i need to alloc for my structures
+//   addToOutput("%Size" + to_string(last_var + 1) + " = getelementptr " + type_no_star + ", " + type + " null, i32 1\n");
+//   addToOutput("%Size_" + to_string(last_var + 1) + " = ptrtoint " + type + " %Size" + to_string(last_var + 1) + " to i32" + "\n");
 
-  auto size = "%Size_" + to_string(last_var + 1);
+//   auto size = "%Size_" + to_string(last_var + 1);
 
-  if(dynamic_cast<IdentExpSimple*>(p->identexpan_)) {
-    addToOutput("%i" + to_string(last_var + 1) + " = call i8* @malloc(i32 " + size + ")\n");
-    addToOutput("%i" + to_string(last_var + 2) + " = bitcast i8* %i" + to_string(last_var + 1) + " to " + type + "\n");
-    addToOutput("call void @" + p->ident_ + "__reset" + "(" + type + " %i" + to_string(last_var + 2) + ")\n");
-    addToOutput("store " + type + " %i" + to_string(last_var + 2) + ", " + type + "* %" + getCurrentVarNum(*p->identexpan_) + "\n");
+//   if(dynamic_cast<IdentExpSimple*>(p->identexpan_)) {
+//     addToOutput("%i" + to_string(last_var + 1) + " = call i8* @malloc(i32 " + size + ")\n");
+//     addToOutput("%i" + to_string(last_var + 2) + " = bitcast i8* %i" + to_string(last_var + 1) + " to " + type + "\n");
+//     addToOutput("call void @" + p->ident_ + "__reset" + "(" + type + " %i" + to_string(last_var + 2) + ")\n");
+//     addToOutput("store " + type + " %i" + to_string(last_var + 2) + ", " + type + "* %" + getCurrentVarNum(*p->identexpan_) + "\n");
 
-    last_var += 2;
-  }
-  else {
-    p->identexpan_->accept(this);
-    //THIS WILL GET WEIRD
-    deleteLastLine();
+//     last_var += 2;
+//   }
+//   else {
+//     p->identexpan_->accept(this);
+//     //THIS WILL GET WEIRD
+//     deleteLastLine();
 
-    addToOutput("%i" + to_string(last_var + 1) + " = call i8* @malloc(i32 " + size + ")\n");
-    addToOutput("%i" + to_string(last_var + 2) + " = bitcast i8* %i" + to_string(last_var + 1) + " to " + type + "\n");
-    addToOutput("call void @" + p->ident_ + "__reset" + "(" + type + " %i" + to_string(last_var + 2) + ")\n");
-    addToOutput("store " + type + " %i" + to_string(last_var + 2) + ", " + type + "* %i" + to_string(last_var) + "\n");
+//     addToOutput("%i" + to_string(last_var + 1) + " = call i8* @malloc(i32 " + size + ")\n");
+//     addToOutput("%i" + to_string(last_var + 2) + " = bitcast i8* %i" + to_string(last_var + 1) + " to " + type + "\n");
+//     addToOutput("call void @" + p->ident_ + "__reset" + "(" + type + " %i" + to_string(last_var + 2) + ")\n");
+//     addToOutput("store " + type + " %i" + to_string(last_var + 2) + ", " + type + "* %i" + to_string(last_var) + "\n");
 
-    last_var += 2;
-  }
+//     last_var += 2;
+//   }
 
-}
+// }
 
 String LLVM::processSingle(Expr* expr) {
   String ans = "";
@@ -770,10 +827,6 @@ void LLVM::visitNoInit(NoInit *p)
 {  
 }
 
-void LLVM::visitInitClass(InitClass *p) {
-
-}
-
 void LLVM::visitInit(Init *p)
 {
 }
@@ -817,20 +870,49 @@ void LLVM::visitExpr(Expr *p) {} //abstract class
 void LLVM::visitENullCast(ENullCast *p) {
 }
 
+void LLVM::visitENewClass(ENewClass *p) {
+  auto ident = dynamic_cast<Class*>(p->type_)->ident_;
+  auto type = "%" + ident + "*";
+  auto type_no_star = "%" + ident;
+
+  // This nifty little snippet will compute how much memory i need to alloc for my structures
+  addToOutput("%Size" + to_string(last_var + 1) + " = getelementptr " + type_no_star + ", " + type + " null, i32 1\n");
+  addToOutput("%Size_" + to_string(last_var + 1) + " = ptrtoint " + type + " %Size" + to_string(last_var + 1) + " to i32" + "\n");
+
+  auto size = "%Size_" + to_string(last_var + 1);
+
+  addToOutput("%i" + to_string(last_var + 1) + " = call i8* @malloc(i32 " + size + ")\n");
+  addToOutput("%i" + to_string(last_var + 2) + " = bitcast i8* %i" + to_string(last_var + 1) + " to " + type + "\n");
+  addToOutput("call void @" + ident + "__reset" + "(" + type + " %i" + to_string(last_var + 2) + ")\n");
+
+  last_var += 2;
+}
+
 void LLVM::visitEVar(EVar *p)
 {
   auto type = cpp_to_llvm_types(p->expr_type_);
   if(dynamic_cast<IdentExpSimple*>(p->identexpan_)) {
     addToOutput("%i" + to_string(last_var + 1) + " = load " + type + ", " + type + "* %" + getCurrentVarNum(*p->identexpan_) + "\n");
     last_var++;
+    return;
   } 
-  else {
+  if(dynamic_cast<IdentExpSimpleFun*>(p->identexpan_)) {
+    p->identexpan_->accept(this);
+    return;
+  }
+  if(dynamic_cast<IdentExp*>(p->identexpan_)) {
     p->identexpan_->accept(this);
     deleteLastLine();
 
     addToOutput("%i" + to_string(last_var + 1) + " = load " + type + ", " + type + "* %i" + to_string(last_var) + "\n");
     last_var++; 
+    return;
   }
+  if(dynamic_cast<IdentExpFun*>(p->identexpan_)) {
+    p->identexpan_->accept(this);
+    // TODO
+  }
+
   
 }
 
@@ -844,79 +926,6 @@ void LLVM::visitELitTrue(ELitTrue *p)
 
 void LLVM::visitELitFalse(ELitFalse *p)
 {
-}
-
-void LLVM::visitEApp(EApp *p)
-{
-  if(auto simple = dynamic_cast<IdentExpSimple*>(p->identexpan_)) {
-    vector <string> computed_args;
-    for (ListExpr::const_iterator i = p->listexpr_->begin() ; i != p->listexpr_->end() ; ++i)
-    {
-      computed_args.push_back(processSingle(*i));
-    }
-    if(!dynamic_cast<Void*>(function_data[simple->ident_].first)) {
-      addToOutput("%i" + to_string(last_var + 1) + " = ");
-      last_var++;
-    }
-    vector<Type*> listarg = function_data[simple->ident_].second;
-    addToOutput("call " + transform_type_name(*function_data[simple->ident_].first) + " @" + simple->ident_ + "(");
-    for (int i = 0 ; i < listarg.size() ; ++i)
-    {
-      if(i > 0) addToOutput(", ");
-      addToOutput(transform_type_name(*listarg[i]) + " " + computed_args[i]);
-    }
-    addToOutput(")\n");
-  }
-
-
-  if(auto complex = dynamic_cast<IdentExp*>(p->identexpan_)) {
-    complex->identexpan_->accept(this);
-
-    string current_class = current_exp_type;
-    cerr << "We have now " << current_class << " looking for method " << complex->ident_ << "\n";
-    for(auto fun : env_of_classes[current_class].first) {
-      cerr << fun.first << "\n";
-    }
-
-    while(env_of_classes[current_class].first.find(complex->ident_) == env_of_classes[current_class].first.end()) {
-      auto next_class = env_of_classes[current_class].second;
-
-      addToOutput("%i_helper" + to_string(last_var + 1) + " = getelementptr inbounds %" + current_class + ", %" + current_class + "* %i" + to_string(last_var) + ", i32 0, i32 0\n");
-      addToOutput("%i" + to_string(last_var + 1) + " = load %" + next_class + "*, %" + next_class + "** %i_helper" + to_string(last_var + 1) + "\n");
-
-      current_class = next_class;
-      last_var++;
-    }
-    current_exp_type = current_class;
-    auto ans = "%i" + to_string(last_var);
-    auto fn_name = current_exp_type + "_" + complex->ident_;
-
-    vector <string> computed_args;
-    for (ListExpr::const_iterator i = p->listexpr_->begin() ; i != p->listexpr_->end() ; ++i)
-    {
-      computed_args.push_back(processSingle(*i));
-    }
-
-
-    if(!dynamic_cast<Void*>(function_data[fn_name].first)) {
-      addToOutput("%i" + to_string(last_var + 1) + " = ");
-      last_var++;
-    }
-
-
-    addToOutput("call " + transform_type_name(*function_data[fn_name].first) + " @" + fn_name + "(%" + current_exp_type + "* " + ans);
-    vector<Type*> listarg = function_data[fn_name].second;
-    for (int i = 0 ; i < listarg.size() ; ++i)
-    {
-      // if(i > 0) 
-      addToOutput(", ");
-      addToOutput(transform_type_name(*listarg[i]) + " " + computed_args[i]);
-    }
-    addToOutput(")\n");
-  }
-
-
-
 }
 
 void LLVM::visitEString(EString *p)

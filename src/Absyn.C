@@ -393,6 +393,57 @@ IdentExp *IdentExp::clone() const
 
 
 
+/********************   IdentExpFun    ********************/
+IdentExpFun::IdentExpFun(IdentExpan *p1, Ident p2, ListExpr *p3)
+{
+  identexpan_ = p1;
+  ident_ = p2;
+  listexpr_ = p3;
+
+}
+
+IdentExpFun::IdentExpFun(const IdentExpFun & other)
+{
+  identexpan_ = other.identexpan_->clone();
+  ident_ = other.ident_;
+  listexpr_ = other.listexpr_->clone();
+
+}
+
+IdentExpFun &IdentExpFun::operator=(const IdentExpFun & other)
+{
+  IdentExpFun tmp(other);
+  swap(tmp);
+  return *this;
+}
+
+void IdentExpFun::swap(IdentExpFun & other)
+{
+  std::swap(identexpan_, other.identexpan_);
+  std::swap(ident_, other.ident_);
+  std::swap(listexpr_, other.listexpr_);
+
+}
+
+IdentExpFun::~IdentExpFun()
+{
+  delete(identexpan_);
+  delete(listexpr_);
+
+}
+
+void IdentExpFun::accept(Visitor *v)
+{
+  v->visitIdentExpFun(this);
+}
+
+IdentExpFun *IdentExpFun::clone() const
+{
+  return new IdentExpFun(*this);
+}
+
+
+
 /********************   IdentExpSimple    ********************/
 IdentExpSimple::IdentExpSimple(Ident p1)
 {
@@ -434,6 +485,53 @@ IdentExpSimple *IdentExpSimple::clone() const
   IdentExpSimple* copy_ = new IdentExpSimple(*this);
   copy_->my_type_ = this->my_type_; 
   return copy_;
+}
+
+
+
+/********************   IdentExpSimpleFun    ********************/
+IdentExpSimpleFun::IdentExpSimpleFun(Ident p1, ListExpr *p2)
+{
+  ident_ = p1;
+  listexpr_ = p2;
+
+}
+
+IdentExpSimpleFun::IdentExpSimpleFun(const IdentExpSimpleFun & other)
+{
+  ident_ = other.ident_;
+  listexpr_ = other.listexpr_->clone();
+
+}
+
+IdentExpSimpleFun &IdentExpSimpleFun::operator=(const IdentExpSimpleFun & other)
+{
+  IdentExpSimpleFun tmp(other);
+  swap(tmp);
+  return *this;
+}
+
+void IdentExpSimpleFun::swap(IdentExpSimpleFun & other)
+{
+  std::swap(ident_, other.ident_);
+  std::swap(listexpr_, other.listexpr_);
+
+}
+
+IdentExpSimpleFun::~IdentExpSimpleFun()
+{
+  delete(listexpr_);
+
+}
+
+void IdentExpSimpleFun::accept(Visitor *v)
+{
+  v->visitIdentExpSimpleFun(this);
+}
+
+IdentExpSimpleFun *IdentExpSimpleFun::clone() const
+{
+  return new IdentExpSimpleFun(*this);
 }
 
 
@@ -705,53 +803,6 @@ void Ass::accept(Visitor *v)
 Ass *Ass::clone() const
 {
   return new Ass(*this);
-}
-
-
-
-/********************   NewClass    ********************/
-NewClass::NewClass(IdentExpan *p1, Ident p2)
-{
-  identexpan_ = p1;
-  ident_ = p2;
-
-}
-
-NewClass::NewClass(const NewClass & other)
-{
-  identexpan_ = other.identexpan_->clone();
-  ident_ = other.ident_;
-
-}
-
-NewClass &NewClass::operator=(const NewClass & other)
-{
-  NewClass tmp(other);
-  swap(tmp);
-  return *this;
-}
-
-void NewClass::swap(NewClass & other)
-{
-  std::swap(identexpan_, other.identexpan_);
-  std::swap(ident_, other.ident_);
-
-}
-
-NewClass::~NewClass()
-{
-  delete(identexpan_);
-
-}
-
-void NewClass::accept(Visitor *v)
-{
-  v->visitNewClass(this);
-}
-
-NewClass *NewClass::clone() const
-{
-  return new NewClass(*this);
 }
 
 
@@ -1210,52 +1261,6 @@ Init *Init::clone() const
 
 
 
-/********************   InitClass    ********************/
-InitClass::InitClass(Ident p1, Ident p2)
-{
-  ident_1 = p1;
-  ident_2 = p2;
-
-}
-
-InitClass::InitClass(const InitClass & other)
-{
-  ident_1 = other.ident_1;
-  ident_2 = other.ident_2;
-
-}
-
-InitClass &InitClass::operator=(const InitClass & other)
-{
-  InitClass tmp(other);
-  swap(tmp);
-  return *this;
-}
-
-void InitClass::swap(InitClass & other)
-{
-  std::swap(ident_1, other.ident_1);
-  std::swap(ident_2, other.ident_2);
-
-}
-
-InitClass::~InitClass()
-{
-
-}
-
-void InitClass::accept(Visitor *v)
-{
-  v->visitInitClass(this);
-}
-
-InitClass *InitClass::clone() const
-{
-  return new InitClass(*this);
-}
-
-
-
 /********************   Int    ********************/
 Int::Int()
 {
@@ -1551,6 +1556,50 @@ ENullCast *ENullCast::clone() const
 
 
 
+/********************   ENewClass    ********************/
+ENewClass::ENewClass(Type *p1)
+{
+  type_ = p1;
+
+}
+
+ENewClass::ENewClass(const ENewClass & other)
+{
+  type_ = other.type_->clone();
+
+}
+
+ENewClass &ENewClass::operator=(const ENewClass & other)
+{
+  ENewClass tmp(other);
+  swap(tmp);
+  return *this;
+}
+
+void ENewClass::swap(ENewClass & other)
+{
+  std::swap(type_, other.type_);
+
+}
+
+ENewClass::~ENewClass()
+{
+  delete(type_);
+
+}
+
+void ENewClass::accept(Visitor *v)
+{
+  v->visitENewClass(this);
+}
+
+ENewClass *ENewClass::clone() const
+{
+  return new ENewClass(*this);
+}
+
+
+
 /********************   EVar    ********************/
 EVar::EVar(IdentExpan *p1)
 {
@@ -1714,54 +1763,6 @@ void ELitFalse::accept(Visitor *v)
 ELitFalse *ELitFalse::clone() const
 {
   return new ELitFalse(*this);
-}
-
-
-
-/********************   EApp    ********************/
-EApp::EApp(IdentExpan *p1, ListExpr *p2)
-{
-  identexpan_ = p1;
-  listexpr_ = p2;
-
-}
-
-EApp::EApp(const EApp & other)
-{
-  identexpan_ = other.identexpan_->clone();
-  listexpr_ = other.listexpr_->clone();
-
-}
-
-EApp &EApp::operator=(const EApp & other)
-{
-  EApp tmp(other);
-  swap(tmp);
-  return *this;
-}
-
-void EApp::swap(EApp & other)
-{
-  std::swap(identexpan_, other.identexpan_);
-  std::swap(listexpr_, other.listexpr_);
-
-}
-
-EApp::~EApp()
-{
-  delete(identexpan_);
-  delete(listexpr_);
-
-}
-
-void EApp::accept(Visitor *v)
-{
-  v->visitEApp(this);
-}
-
-EApp *EApp::clone() const
-{
-  return new EApp(*this);
 }
 
 

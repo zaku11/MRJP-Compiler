@@ -41,7 +41,7 @@ public:
   string output;
   string inject;
 
-  LLVM(StructEnv, ClassEnv);
+  LLVM(ClassEnv);
   ~LLVM(void);
   void deleteLastLine();
   void addToOutput(string text);
@@ -73,7 +73,9 @@ public:
 
   void visitIdentExpan(IdentExpan *p); /* abstract class */
   void visitIdentExp(IdentExp *p);
+  void visitIdentExpFun(IdentExpFun *p);
   void visitIdentExpSimple(IdentExpSimple *p);
+  void visitIdentExpSimpleFun(IdentExpSimpleFun *p);
 
   void visitListTopDef(ListTopDef *p);
   void visitArg(Arg *p); /* abstract class */
@@ -87,7 +89,6 @@ public:
   void visitBStmt(BStmt *p);
   void visitDecl(Decl *p);
   void visitAss(Ass *p);
-  void visitNewClass(NewClass *p);
   void visitIncr(Incr *p);
   void visitDecr(Decr *p);
   void visitRet(Ret *p);
@@ -102,7 +103,6 @@ public:
   void visitListItem(ListItem *p);
   void visitType(Type *p); /* abstract class */
   void visitInt(Int *p);
-  void visitInitClass(InitClass *p);
   void visitStr(Str *p);
   void visitBool(Bool *p);
   void visitVoid(Void *p);
@@ -115,11 +115,11 @@ public:
 
   void visitExpr(Expr *p); /* abstract class */
   void visitENullCast(ENullCast *p);
+  void visitENewClass(ENewClass *p);
   void visitEVar(EVar *p);
   void visitELitInt(ELitInt *p);
   void visitELitTrue(ELitTrue *p);
   void visitELitFalse(ELitFalse *p);
-  void visitEApp(EApp *p);
   void visitEString(EString *p);
   void visitNeg(Neg *p);
   void visitNot(Not *p);
