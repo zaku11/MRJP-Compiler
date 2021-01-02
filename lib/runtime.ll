@@ -15,6 +15,7 @@ declare i8* @strcpy(i8*, i8*)
 declare i8* @strcat(i8*, i8*)
 declare void @free(i8*)
 declare void @exit(i32)
+declare i32 @strcmp(i8*, i8*)
 
 
 
@@ -62,6 +63,14 @@ define void @error() {
         ret void
 }
 
+@null_ptr_msg = internal constant [42 x i8] c"Runtime error : tried to access a nullptr\00"
+define void @fail_null_ptr() {
+        %str = getelementptr [42 x i8], [42 x i8]* @null_ptr_msg, i32 0, i32 0
+        call void @printString(i8* %str)
+        call void @exit(i32 0)
+        ret void
+}
+
 define i8* @concat(i8* %s1, i8* %s2)   {
 entry:  
         %i1 = call i32 @strlen(i8* %s1)
@@ -72,4 +81,9 @@ entry:
         %i6 = call i8* @strcpy(i8* %i5, i8* %s1)
         %i7 = call i8* @strcat(i8* %i6, i8* %s2)
         ret i8* %i7                            
+}
+
+define i32 @compare_strings(i8* %s1, i8* %s2) {
+        %ans = call i32 @strcmp(i8* %s1, i8* %s2)
+        ret i32 %ans
 }

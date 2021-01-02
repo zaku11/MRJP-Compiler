@@ -12,6 +12,7 @@
 #include "Printer.H"
 #include "LLVM.H"
 #include <iostream>
+#include <fstream>
 
 void usage() {
   printf("usage: Call with one of the following argument combinations:\n");
@@ -54,9 +55,21 @@ int main(int argc, char ** argv)
     StaticAnalyzer *p = new StaticAnalyzer();
     try {
       p->analyze(parse_tree);
-      std::cerr << "OK\n";
+      std :: cerr << "OK\n";
       LLVM *llvm = new LLVM(p->env_of_classes);
-      llvm->run(parse_tree);
+      
+      std :: ofstream output;
+      std :: string name = filename;
+      std :: string new_name = name.substr(0, name.find_last_of('.')) + ".bc";
+      std :: string new_ll_name = name.substr(0, name.find_last_of('.')) + ".ll";
+      output.open(new_ll_name);
+      output << llvm->run(parse_tree);
+      output.close();
+      system(("llvm-as-6.0 -o " + new_name + " " + new_ll_name).c_str());
+      system("llvm-as-6.0 -o ./lib/runtime.bc ./lib/runtime.ll");
+      system(("llvm-link-6.0 -o " + new_name + " ./lib/runtime.bc " + new_name).c_str());
+
+      // llvm->run(parse_tree);
       exit(0);
     }
     catch(front_end_exception &e) {

@@ -77,6 +77,7 @@ public:
   void visitClassDefNoInherit(ClassDefNoInherit *p);
   void visitClassDefInherit(ClassDefInherit *p);
   void visitEmptyClassDef(EmptyClassDef *p);
+  void visitEmptyClassDefInherit(EmptyClassDefInherit *p);
   void visitClassMember(ClassMember *p); /* abstract class */
   void visitClassMem(ClassMem *p);
   void visitClassFun(ClassFun *p);

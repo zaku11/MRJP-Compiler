@@ -1,3 +1,3 @@
 all: 
 	+$(MAKE) -C ./src/
-	cp ./src/latc ./
+	cp ./src/latc_llvm ./

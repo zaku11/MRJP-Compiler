@@ -244,6 +244,52 @@ EmptyClassDef *EmptyClassDef::clone() const
 
 
 
+/********************   EmptyClassDefInherit    ********************/
+EmptyClassDefInherit::EmptyClassDefInherit(Ident p1, Ident p2)
+{
+  ident_1 = p1;
+  ident_2 = p2;
+
+}
+
+EmptyClassDefInherit::EmptyClassDefInherit(const EmptyClassDefInherit & other)
+{
+  ident_1 = other.ident_1;
+  ident_2 = other.ident_2;
+
+}
+
+EmptyClassDefInherit &EmptyClassDefInherit::operator=(const EmptyClassDefInherit & other)
+{
+  EmptyClassDefInherit tmp(other);
+  swap(tmp);
+  return *this;
+}
+
+void EmptyClassDefInherit::swap(EmptyClassDefInherit & other)
+{
+  std::swap(ident_1, other.ident_1);
+  std::swap(ident_2, other.ident_2);
+
+}
+
+EmptyClassDefInherit::~EmptyClassDefInherit()
+{
+
+}
+
+void EmptyClassDefInherit::accept(Visitor *v)
+{
+  v->visitEmptyClassDefInherit(this);
+}
+
+EmptyClassDefInherit *EmptyClassDefInherit::clone() const
+{
+  return new EmptyClassDefInherit(*this);
+}
+
+
+
 /********************   ClassMem    ********************/
 ClassMem::ClassMem(Type *p1, Ident p2)
 {

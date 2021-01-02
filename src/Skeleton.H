@@ -28,6 +28,7 @@ public:
   void visitClassDefNoInherit(ClassDefNoInherit *p);
   void visitClassDefInherit(ClassDefInherit *p);
   void visitEmptyClassDef(EmptyClassDef *p);
+  void visitEmptyClassDefInherit(EmptyClassDefInherit *p);
   void visitIdentExp(IdentExp *p);
   void visitIdentExpFun(IdentExpFun *p);
   void visitIdentExpSimple(IdentExpSimple *p);

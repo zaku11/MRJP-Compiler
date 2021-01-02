@@ -68,6 +68,15 @@ void Skeleton::visitEmptyClassDef(EmptyClassDef *empty_class_def)
 
 }
 
+void Skeleton::visitEmptyClassDefInherit(EmptyClassDefInherit *empty_class_def_inherit)
+{
+  /* Code For EmptyClassDefInherit Goes Here */
+
+  visitIdent(empty_class_def_inherit->ident_1);
+  visitIdent(empty_class_def_inherit->ident_2);
+
+}
+
 void Skeleton::visitClassMem(ClassMem *class_mem)
 {
   /* Code For ClassMem Goes Here */
@@ -311,11 +320,11 @@ void Skeleton::visitENullCast(ENullCast *e_null_cast)
 
 }
 
-void Skeleton::visitENewClass(ENewClass *e_new_struct)
+void Skeleton::visitENewClass(ENewClass *e_new_class)
 {
   /* Code For ENewClass Goes Here */
 
-  e_new_struct->type_->accept(this);
+  e_new_class->type_->accept(this);
 
 }
 

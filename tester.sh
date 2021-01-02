@@ -8,14 +8,14 @@ for f in ./lattests/good/*.output
 do
     filename=${f::-7}.lat
     echo -e "\e[0mTEST $filename"
-    ./latc $filename 2>1 > /dev/null
+    ./latc_llvm $filename 2>1 > /dev/null
     if [ $? -eq 0 ] 
     then
-        ./latc $filename > tmp.ll && llvm-as-6.0 -o tmp.bc tmp.ll && llvm-as-6.0 -o ./runtime.bc ./runtime.ll && llvm-link-6.0 -o tmp.bc ./runtime.bc tmp.bc
+        ./latc_llvm $filename 
         if test -f ${f::-7}.input; 
         then 
             echo -e "Test with input"
-            lli-6.0 tmp.bc < ${f::-7}.input > tmp.out
+            lli-6.0 ${f::-7}.bc < ${f::-7}.input > tmp.out
             if  diff $f tmp.out > /dev/null 2>&1
             then
                 echo -e "\e[32m\e[1mOK"
@@ -24,7 +24,7 @@ do
                 echo -e "\e[31m\e[1mWRONG"
             fi
         else 
-            lli-6.0 tmp.bc > tmp.out
+            lli-6.0 ${f::-7}.bc > tmp.out
             if diff $f tmp.out > /dev/null 2>&1
             then
                 echo -e "\e[32m\e[1mOK"
@@ -43,7 +43,7 @@ done
 # for f in ./lattests/bad/*.lat
 # do
 #     echo -e "\e[0mTEST $f"
-#     ./latc $f
+#     ./latc_llvm $f
 #     if [ $? -eq 0 ] 
 #     then
 #         echo -e "\e[31m\e[1mWRONG"

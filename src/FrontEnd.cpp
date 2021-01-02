@@ -170,7 +170,7 @@ void StaticAnalyzer::visitFnDef(FnDef *p)
   expected_return_type = get_type(p->type_);
 
   p->block_->accept(this);
-  if(last_return != get_type(p->type_)) 
+  if(!is_an_ancestor_type(last_return, get_type(p->type_), env_of_classes)) 
     fail("function returned " + last_return + " but should return " + get_type(p->type_) + "\n", p);
 
   //We need to clear out our env from our vars
@@ -181,6 +181,7 @@ void StaticAnalyzer::visitFnDef(FnDef *p)
 
 ClassDefInherit* port(ClassDefNoInherit* class_def) {
   ClassDefInherit* cpy = new ClassDefInherit{class_def->ident_, "", class_def->listclassmember_->clone()};
+  cpy->line_number = class_def->line_number;
   return cpy;
 }
 
@@ -196,6 +197,8 @@ void StaticAnalyzer::visitClassDefInherit(ClassDefInherit *p) {
     fail("you can't inherit from basic type\n", p);
   if(p->ident_2 != "" && env_of_structures.find(p->ident_2) == env_of_structures.end())
     fail("class " + p->ident_2 + " was not recognized.\n", p);
+  if(p->ident_2 == p->ident_1) 
+    fail("class can't inherit from itself\n", p);
 
   set <Ident> present_args;
   set <Ident> present_fns;
@@ -243,6 +246,7 @@ void StaticAnalyzer::visitClassDefInherit(ClassDefInherit *p) {
       env_of_vars["self"] = p->ident_1;
 
       FnDef* tmp_fun = new FnDef{fun_member->type_->clone(), fun_member->ident_, fun_member->listarg_->clone(), fun_member->block_->clone()};
+      tmp_fun->line_number = fun_member->line_number;
 
       tmp_fun->accept(this);
       env_of_vars = tmp_env_of_vars;
@@ -253,10 +257,19 @@ void StaticAnalyzer::visitClassDefInherit(ClassDefInherit *p) {
 }
 
 void StaticAnalyzer::visitEmptyClassDef(EmptyClassDef *p) {
-  if(is_a_basic_type(p->ident_)) {
-    fail("you can't have " + p->ident_ + " as a class name\n", p);
-  }
+  auto no_members = new ListClassMember();
+  ClassDefInherit* cpy = new ClassDefInherit{p->ident_, "", no_members};
+  cpy->line_number = p->line_number;
+  cpy->accept(this);
 }
+
+void StaticAnalyzer::visitEmptyClassDefInherit(EmptyClassDefInherit *p) {
+  auto no_members = new ListClassMember();
+  ClassDefInherit* cpy = new ClassDefInherit{p->ident_1, p->ident_2, no_members};
+  cpy->line_number = p->line_number;
+  cpy->accept(this);
+}
+
 
 
 void StaticAnalyzer::visitClassMember(ClassMember *p) {} //abstract class
@@ -389,7 +402,6 @@ void StaticAnalyzer::visitListTopDef(ListTopDef *listtopdef)
 
       env_of_structures[class_def->ident_1] = data.first;
       env_of_classes[class_def->ident_1] = make_pair(data.second, class_def->ident_2);
-      // cerr << "Now class " << class_def->ident_1 << " inherits from " << class_def->ident_2 << "\n";
     }
     if(auto class_def = dynamic_cast<ClassDefNoInherit*>(*i)) {
       if(env_of_structures.find(class_def->ident_) != env_of_structures.end())
@@ -410,6 +422,17 @@ void StaticAnalyzer::visitListTopDef(ListTopDef *listtopdef)
       env_of_structures[class_def->ident_] = no_members;
       env_of_classes[class_def->ident_] = make_pair(no_class_functions, "");
     }
+    if(auto class_def = dynamic_cast<EmptyClassDefInherit*>(*i)) {
+      if(env_of_structures.find(class_def->ident_1) != env_of_structures.end())
+        fail("class was defined before\n", class_def);
+
+      map <Ident, TYPE> no_members;
+      FunEnv no_class_functions;
+
+      env_of_structures[class_def->ident_1] = no_members;
+      env_of_classes[class_def->ident_1] = make_pair(no_class_functions, class_def->ident_2);
+    }
+    
     
     
   }
@@ -559,7 +582,9 @@ void StaticAnalyzer::visitRet(Ret *p)
 {
   p->expr_->accept(this);
   
-  check_for_type_matching(expected_return_type, last_evaluated_expr, p);
+  if(!is_an_ancestor_type(last_evaluated_expr, expected_return_type, env_of_classes))
+    fail("Got type " + last_evaluated_expr + " but expected type " + expected_return_type + "\n", p);
+  // check_for_type_matching(expected_return_type, last_evaluated_expr, p);
 
   last_return = last_evaluated_expr;
 
@@ -711,6 +736,7 @@ void StaticAnalyzer::visitENullCast(ENullCast *p) {
     fail("you can't cast null to a basic type\n", p);
   if(!is_a_valid_type(p->type_, env_of_structures)) 
     fail("struct " + null_type + " was not recognized\n", p);
+
   last_evaluated_expr = null_type;
   last_evaluated_expr_value = DECOY;
 
@@ -868,8 +894,9 @@ void StaticAnalyzer::visitERel(ERel *p)
   last_evaluated_expr_value = DECOY;
 
   p->expr_type_ = last_evaluated_expr;
+  bool can_be_matched = is_an_ancestor_type(type1, type2, env_of_classes) || is_an_ancestor_type(type2, type1, env_of_classes); 
 
-  if(type1 != type2 || type1 == TYPE_VOID) 
+  if(!can_be_matched || type1 == TYPE_VOID) 
     fail("cannot compare " + type1 + " and " + type2 + "\n", p);
 
   if(type1 == TYPE_BOOLEAN) {

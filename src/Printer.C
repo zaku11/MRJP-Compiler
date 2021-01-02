@@ -1,6 +1,7 @@
 /*** BNFC-Generated Pretty Printer and Abstract Syntax Viewer ***/
 
 #include <string>
+#include <iostream>
 #include "Printer.H"
 #define INDENT_WIDTH 2
 
@@ -125,7 +126,7 @@ char *PrintAbsyn::print(Visitable *v)
   }
   catch(end_exception &e) {
     int ptr = this->cur_ - 1;
-    int how_many_enters = 3;
+    int how_many_enters = 4;
     while(how_many_enters > 0 && ptr > 0) {
       if(buf_[ptr] == '\n')
         how_many_enters--;
@@ -136,10 +137,17 @@ char *PrintAbsyn::print(Visitable *v)
   }
 }
 
-void PrintAbsyn::try_to_end(Visitable *v, int line_number) {
+void PrintAbsyn::try_to_end(Visitable *v) {
   if(this->erronous_statement == v) {
     revert_white_chars();
-    bufAppend(" <- LINE " + std::to_string(line_number) + " : " + this->error_message);
+    bufAppend(" <- LINE " + std::to_string(v->line_number) + " : " + this->error_message);
+    throw end_exception();
+  }
+  if(this->erronous_statement->line_number < v->line_number) {
+    revert_white_chars();
+    while(this->cur_ > 0 && buf_[this->cur_] != '\n') this->cur_--;
+    
+    bufAppend(" <- LINE " + std::to_string(v->line_number) + " : " + this->error_message);
     throw end_exception();
   }
 }
@@ -156,7 +164,7 @@ void PrintAbsyn::visitProgramDef(ProgramDef *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitTopDef(TopDef *p) {} //abstract class
@@ -176,7 +184,7 @@ void PrintAbsyn::visitFnDef(FnDef *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitClassDefNoInherit(ClassDefNoInherit *p)
@@ -193,7 +201,7 @@ void PrintAbsyn::visitClassDefNoInherit(ClassDefNoInherit *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitClassDefInherit(ClassDefInherit *p)
@@ -212,7 +220,7 @@ void PrintAbsyn::visitClassDefInherit(ClassDefInherit *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitEmptyClassDef(EmptyClassDef *p)
@@ -228,7 +236,25 @@ void PrintAbsyn::visitEmptyClassDef(EmptyClassDef *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
+}
+
+void PrintAbsyn::visitEmptyClassDefInherit(EmptyClassDefInherit *p)
+{
+  int oldi = _i_;
+  if (oldi > 0) render(_L_PAREN);
+
+  render((char*)"class");
+  visitIdent(p->ident_1);
+  render((char*)"extends");
+  visitIdent(p->ident_2);
+  render('{');
+  render('}');
+
+  if (oldi > 0) render(_R_PAREN);
+
+  _i_ = oldi;
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitClassMember(ClassMember *p) {} //abstract class
@@ -245,7 +271,7 @@ void PrintAbsyn::visitClassMem(ClassMem *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitClassFun(ClassFun *p)
@@ -263,7 +289,7 @@ void PrintAbsyn::visitClassFun(ClassFun *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitListClassMember(ListClassMember *listclassmember)
@@ -289,7 +315,25 @@ void PrintAbsyn::visitIdentExp(IdentExp *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
+}
+
+void PrintAbsyn::visitIdentExpFun(IdentExpFun *p)
+{
+  int oldi = _i_;
+  if (oldi > 0) render(_L_PAREN);
+
+  _i_ = 0; p->identexpan_->accept(this);
+  render('.');
+  visitIdent(p->ident_);
+  render('(');
+  if(p->listexpr_) {_i_ = 0; p->listexpr_->accept(this);}
+  render(')');
+
+  if (oldi > 0) render(_R_PAREN);
+
+  _i_ = oldi;
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitIdentExpSimple(IdentExpSimple *p)
@@ -302,7 +346,23 @@ void PrintAbsyn::visitIdentExpSimple(IdentExpSimple *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
+}
+
+void PrintAbsyn::visitIdentExpSimpleFun(IdentExpSimpleFun *p)
+{
+  int oldi = _i_;
+  if (oldi > 0) render(_L_PAREN);
+
+  visitIdent(p->ident_);
+  render('(');
+  if(p->listexpr_) {_i_ = 0; p->listexpr_->accept(this);}
+  render(')');
+
+  if (oldi > 0) render(_R_PAREN);
+
+  _i_ = oldi;
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitListTopDef(ListTopDef *listtopdef)
@@ -327,7 +387,7 @@ void PrintAbsyn::visitArgDef(ArgDef *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitListArg(ListArg *listarg)
@@ -353,7 +413,7 @@ void PrintAbsyn::visitBlockDef(BlockDef *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitListStmt(ListStmt *liststmt)
@@ -377,7 +437,7 @@ void PrintAbsyn::visitEmpty(Empty *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitBStmt(BStmt *p)
@@ -390,7 +450,7 @@ void PrintAbsyn::visitBStmt(BStmt *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitDecl(Decl *p)
@@ -405,7 +465,7 @@ void PrintAbsyn::visitDecl(Decl *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitAss(Ass *p)
@@ -421,24 +481,7 @@ void PrintAbsyn::visitAss(Ass *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
-}
-
-void PrintAbsyn::visitNewClass(NewClass *p)
-{
-  int oldi = _i_;
-  if (oldi > 0) render(_L_PAREN);
-
-  _i_ = 0; p->identexpan_->accept(this);
-  render('=');
-  render((char*)"new");
-  visitIdent(p->ident_);
-  render(';');
-
-  if (oldi > 0) render(_R_PAREN);
-
-  _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitIncr(Incr *p)
@@ -453,7 +496,7 @@ void PrintAbsyn::visitIncr(Incr *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitDecr(Decr *p)
@@ -468,7 +511,7 @@ void PrintAbsyn::visitDecr(Decr *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitRet(Ret *p)
@@ -483,7 +526,7 @@ void PrintAbsyn::visitRet(Ret *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitVRet(VRet *p)
@@ -497,7 +540,7 @@ void PrintAbsyn::visitVRet(VRet *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitCond(Cond *p)
@@ -514,7 +557,7 @@ void PrintAbsyn::visitCond(Cond *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitCondElse(CondElse *p)
@@ -533,7 +576,7 @@ void PrintAbsyn::visitCondElse(CondElse *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitWhile(While *p)
@@ -550,7 +593,7 @@ void PrintAbsyn::visitWhile(While *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitSExp(SExp *p)
@@ -564,7 +607,7 @@ void PrintAbsyn::visitSExp(SExp *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitItem(Item *p) {} //abstract class
@@ -579,7 +622,7 @@ void PrintAbsyn::visitNoInit(NoInit *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitInit(Init *p)
@@ -594,23 +637,7 @@ void PrintAbsyn::visitInit(Init *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
-}
-
-void PrintAbsyn::visitInitClass(InitClass *p)
-{
-  int oldi = _i_;
-  if (oldi > 0) render(_L_PAREN);
-
-  visitIdent(p->ident_1);
-  render('=');
-  render((char*)"new");
-  visitIdent(p->ident_2);
-
-  if (oldi > 0) render(_R_PAREN);
-
-  _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitListItem(ListItem *listitem)
@@ -634,7 +661,7 @@ void PrintAbsyn::visitInt(Int *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitStr(Str *p)
@@ -647,7 +674,7 @@ void PrintAbsyn::visitStr(Str *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitBool(Bool *p)
@@ -660,7 +687,7 @@ void PrintAbsyn::visitBool(Bool *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitVoid(Void *p)
@@ -673,7 +700,7 @@ void PrintAbsyn::visitVoid(Void *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitClass(Class *p)
@@ -686,7 +713,7 @@ void PrintAbsyn::visitClass(Class *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitFun(Fun *p)
@@ -704,7 +731,7 @@ void PrintAbsyn::visitFun(Fun *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitListType(ListType *listtype)
@@ -730,7 +757,21 @@ void PrintAbsyn::visitENullCast(ENullCast *p)
   if (oldi > 6) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
+}
+
+void PrintAbsyn::visitENewClass(ENewClass *p)
+{
+  int oldi = _i_;
+  if (oldi > 6) render(_L_PAREN);
+
+  render((char*)"new");
+  _i_ = 0; p->type_->accept(this);
+
+  if (oldi > 6) render(_R_PAREN);
+
+  _i_ = oldi;
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitEVar(EVar *p)
@@ -743,7 +784,7 @@ void PrintAbsyn::visitEVar(EVar *p)
   if (oldi > 6) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitELitInt(ELitInt *p)
@@ -756,7 +797,7 @@ void PrintAbsyn::visitELitInt(ELitInt *p)
   if (oldi > 6) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitELitTrue(ELitTrue *p)
@@ -769,7 +810,7 @@ void PrintAbsyn::visitELitTrue(ELitTrue *p)
   if (oldi > 6) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitELitFalse(ELitFalse *p)
@@ -782,23 +823,7 @@ void PrintAbsyn::visitELitFalse(ELitFalse *p)
   if (oldi > 6) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
-}
-
-void PrintAbsyn::visitEApp(EApp *p)
-{
-  int oldi = _i_;
-  if (oldi > 6) render(_L_PAREN);
-
-  _i_ = 0; p->identexpan_->accept(this);
-  render('(');
-  if(p->listexpr_) {_i_ = 0; p->listexpr_->accept(this);}
-  render(')');
-
-  if (oldi > 6) render(_R_PAREN);
-
-  _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitEString(EString *p)
@@ -811,7 +836,7 @@ void PrintAbsyn::visitEString(EString *p)
   if (oldi > 6) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitNeg(Neg *p)
@@ -825,7 +850,7 @@ void PrintAbsyn::visitNeg(Neg *p)
   if (oldi > 5) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitNot(Not *p)
@@ -839,7 +864,7 @@ void PrintAbsyn::visitNot(Not *p)
   if (oldi > 5) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitEMul(EMul *p)
@@ -854,7 +879,7 @@ void PrintAbsyn::visitEMul(EMul *p)
   if (oldi > 4) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitEAdd(EAdd *p)
@@ -869,7 +894,7 @@ void PrintAbsyn::visitEAdd(EAdd *p)
   if (oldi > 3) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitERel(ERel *p)
@@ -884,7 +909,7 @@ void PrintAbsyn::visitERel(ERel *p)
   if (oldi > 2) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitEAnd(EAnd *p)
@@ -899,7 +924,7 @@ void PrintAbsyn::visitEAnd(EAnd *p)
   if (oldi > 1) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitEOr(EOr *p)
@@ -914,7 +939,7 @@ void PrintAbsyn::visitEOr(EOr *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitListExpr(ListExpr *listexpr)
@@ -938,7 +963,7 @@ void PrintAbsyn::visitPlus(Plus *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitMinus(Minus *p)
@@ -951,7 +976,7 @@ void PrintAbsyn::visitMinus(Minus *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitMulOp(MulOp *p) {} //abstract class
@@ -966,7 +991,7 @@ void PrintAbsyn::visitTimes(Times *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitDiv(Div *p)
@@ -979,7 +1004,7 @@ void PrintAbsyn::visitDiv(Div *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitMod(Mod *p)
@@ -992,7 +1017,7 @@ void PrintAbsyn::visitMod(Mod *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitRelOp(RelOp *p) {} //abstract class
@@ -1007,7 +1032,7 @@ void PrintAbsyn::visitLTH(LTH *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitLE(LE *p)
@@ -1020,7 +1045,7 @@ void PrintAbsyn::visitLE(LE *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitGTH(GTH *p)
@@ -1033,7 +1058,7 @@ void PrintAbsyn::visitGTH(GTH *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitGE(GE *p)
@@ -1046,7 +1071,7 @@ void PrintAbsyn::visitGE(GE *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitEQU(EQU *p)
@@ -1059,7 +1084,7 @@ void PrintAbsyn::visitEQU(EQU *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitNE(NE *p)
@@ -1072,7 +1097,7 @@ void PrintAbsyn::visitNE(NE *p)
   if (oldi > 0) render(_R_PAREN);
 
   _i_ = oldi;
-  try_to_end(p, p->line_number);
+  try_to_end(p);
 }
 
 void PrintAbsyn::visitInteger(Integer i)

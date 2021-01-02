@@ -17,7 +17,7 @@ distclean: clean
 	rm -f Absyn.C Absyn.H Test.C Parser.C Parser.H Lexer.C Skeleton.C Skeleton.H FrontEnd.cpp FrontEnd.H Makefile Latte.l Latte.y Latte.tex 
 
 TestLatte: ${OBJS} Test.o
-	${CC} ${OBJS} Test.o -o latc
+	${CC} ${OBJS} Test.o -o latc_llvm
 
 Absyn.o: Absyn.C Absyn.H
 	${CC} -c Absyn.C

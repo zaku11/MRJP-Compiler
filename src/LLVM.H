@@ -29,10 +29,13 @@ protected:
   map<Ident, int> last_var_numbers;
   map<Ident, pair<Type*, vector<Type*> > > function_data;
 
+  bool mangle_fn_names = true;
+  string current_expected_return = "";
+  string null_ptr_label = "";
+  bool was_null_ptr_label_needed = false;
   // This maps a struct name into a map (member_name -> (member_type, his number))
   map<Ident, map <string, pair<string, int> > > struct_data;
 
-  StructEnv env_of_structures;
   ClassEnv env_of_classes;
 
   string current_exp_type;
@@ -49,9 +52,16 @@ public:
   bool doesEndWithReturn();
 
   void addToInject(string text);
-  void prependInject(string text);
   
-  void run(Visitable *v);
+  void check_for_nulls();
+  void go_upward_in_inheritance(string current_class, string expected_class, string last_ans);
+  void prefetchClasses(ClassDefInherit *p);
+  void prefetchClasses(ClassDefNoInherit *p);
+  void prefetchClasses(EmptyClassDef *p);
+  void prefetchClasses(EmptyClassDefInherit *p);
+
+
+  string run(Visitable *v);
   void run_with_rollback(Visitable* v);
   string getCurrentVarNum(Ident id);
   string getCurrentVarNum(IdentExpan &id);
@@ -66,6 +76,7 @@ public:
   void visitClassDefNoInherit(ClassDefNoInherit *p);
   void visitClassDefInherit(ClassDefInherit *p);
   void visitEmptyClassDef(EmptyClassDef *p);
+  void visitEmptyClassDefInherit(EmptyClassDefInherit *p);
   void visitClassMember(ClassMember *p); /* abstract class */
   void visitClassMem(ClassMem *p);
   void visitClassFun(ClassFun *p);

@@ -797,6 +797,7 @@ TopDef : Type _IDENT_ _SYMB_0 ListArg _SYMB_1 Block {  std::reverse($4->begin(),
   | _SYMB_26 _IDENT_ _SYMB_3 ListClassMember _SYMB_4 {  std::reverse($4->begin(),$4->end()) ;$$ = new ClassDefNoInherit($2, $4); $$->line_number = yy_mylinenumber;  }
   | _SYMB_26 _IDENT_ _SYMB_28 _IDENT_ _SYMB_3 ListClassMember _SYMB_4 {  std::reverse($6->begin(),$6->end()) ;$$ = new ClassDefInherit($2, $4, $6); $$->line_number = yy_mylinenumber;  }
   | _SYMB_26 _IDENT_ _SYMB_3 _SYMB_4 {  $$ = new EmptyClassDef($2); $$->line_number = yy_mylinenumber;  }
+  | _SYMB_26 _IDENT_ _SYMB_28 _IDENT_ _SYMB_3 _SYMB_4 {  $$ = new EmptyClassDefInherit($2, $4); $$->line_number = yy_mylinenumber;  }
 ;
 ClassMember : Type _IDENT_ _SYMB_2 {  $$ = new ClassMem($1, $2); $$->line_number = yy_mylinenumber;  } 
   | Type _IDENT_ _SYMB_0 ListArg _SYMB_1 Block {  std::reverse($4->begin(),$4->end()) ;$$ = new ClassFun($1, $2, $4, $6); $$->line_number = yy_mylinenumber;  }

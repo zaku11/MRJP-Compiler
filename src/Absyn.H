@@ -39,6 +39,7 @@ class ClassFun;
 class ClassDefNoInherit;
 class ClassDefInherit;
 class EmptyClassDef;
+class EmptyClassDefInherit;
 class IdentExp;
 class IdentExpFun;
 class IdentExpSimple;
@@ -124,6 +125,7 @@ public:
   virtual void visitClassDefNoInherit(ClassDefNoInherit *p) = 0;
   virtual void visitClassDefInherit(ClassDefInherit *p) = 0;
   virtual void visitEmptyClassDef(EmptyClassDef *p) = 0;
+  virtual void visitEmptyClassDefInherit(EmptyClassDefInherit *p) = 0;
   virtual void visitIdentExp(IdentExp *p) = 0;
   virtual void visitIdentExpFun(IdentExpFun *p) = 0;
   virtual void visitIdentExpSimple(IdentExpSimple *p) = 0;
@@ -196,6 +198,7 @@ public:
 class Visitable
 {
  public:
+  int line_number;
   virtual ~Visitable() {}
   virtual void accept(Visitor *v) = 0;
 };
@@ -207,63 +210,54 @@ class Program : public Visitable
 {
 public:
   virtual Program *clone() const = 0;
-  int line_number;
 };
 
 class TopDef : public Visitable
 {
 public:
   virtual TopDef *clone() const = 0;
-  int line_number;
 };
 
 class ClassMember : public Visitable
 {
 public:
   virtual ClassMember *clone() const = 0;
-  int line_number;
 };
 
 class IdentExpan : public Visitable
 {
 public:
   virtual IdentExpan *clone() const = 0;
-  int line_number;
 };
 
 class Arg : public Visitable
 {
 public:
   virtual Arg *clone() const = 0;
-  int line_number;
 };
 
 class Block : public Visitable
 {
 public:
   virtual Block *clone() const = 0;
-  int line_number;
 };
 
 class Stmt : public Visitable
 {
 public:
   virtual Stmt *clone() const = 0;
-  int line_number;
 };
 
 class Item : public Visitable
 {
 public:
   virtual Item *clone() const = 0;
-  int line_number;
 };
 
 class Type : public Visitable
 {
 public:
   virtual Type *clone() const = 0;
-  int line_number;
 };
 
 class Expr : public Visitable
@@ -272,28 +266,24 @@ public:
   String expr_type_;
 
   virtual Expr *clone() const = 0;
-  int line_number;
 };
 
 class AddOp : public Visitable
 {
 public:
   virtual AddOp *clone() const = 0;
-  int line_number;
 };
 
 class MulOp : public Visitable
 {
 public:
   virtual MulOp *clone() const = 0;
-  int line_number;
 };
 
 class RelOp : public Visitable
 {
 public:
   virtual RelOp *clone() const = 0;
-  int line_number;
 };
 
 
@@ -372,6 +362,21 @@ public:
   virtual void accept(Visitor *v);
   virtual EmptyClassDef *clone() const;
   void swap(EmptyClassDef &);
+};
+
+class EmptyClassDefInherit : public TopDef
+{
+public:
+  Ident ident_1;
+  Ident ident_2;
+
+  EmptyClassDefInherit(const EmptyClassDefInherit &);
+  EmptyClassDefInherit &operator=(const EmptyClassDefInherit &);
+  EmptyClassDefInherit(Ident p1, Ident p2);
+  ~EmptyClassDefInherit();
+  virtual void accept(Visitor *v);
+  virtual EmptyClassDefInherit *clone() const;
+  void swap(EmptyClassDefInherit &);
 };
 
 class ClassMem : public ClassMember

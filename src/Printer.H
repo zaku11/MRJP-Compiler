@@ -38,7 +38,7 @@ void render(char *s);
   ~PrintAbsyn(void);
   char *print(Visitable *v);
   void revert_white_chars();
-  void try_to_end(Visitable *v, int line_number);
+  void try_to_end(Visitable *v);
 
   void visitProgram(Program *p); /* abstract class */
   void visitProgramDef(ProgramDef *p);
@@ -47,6 +47,7 @@ void render(char *s);
   void visitClassDefNoInherit(ClassDefNoInherit *p);
   void visitClassDefInherit(ClassDefInherit *p);
   void visitEmptyClassDef(EmptyClassDef *p);
+  void visitEmptyClassDefInherit(EmptyClassDefInherit *p);
   void visitClassMember(ClassMember *p); /* abstract class */
   void visitClassMem(ClassMem *p);
   void visitClassFun(ClassFun *p);
