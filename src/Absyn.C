@@ -582,6 +582,138 @@ IdentExpSimpleFun *IdentExpSimpleFun::clone() const
 
 
 
+/********************   IdentExpNew    ********************/
+IdentExpNew::IdentExpNew(Type *p1)
+{
+  type_ = p1;
+
+}
+
+IdentExpNew::IdentExpNew(const IdentExpNew & other)
+{
+  type_ = other.type_->clone();
+
+}
+
+IdentExpNew &IdentExpNew::operator=(const IdentExpNew & other)
+{
+  IdentExpNew tmp(other);
+  swap(tmp);
+  return *this;
+}
+
+void IdentExpNew::swap(IdentExpNew & other)
+{
+  std::swap(type_, other.type_);
+
+}
+
+IdentExpNew::~IdentExpNew()
+{
+  delete(type_);
+
+}
+
+void IdentExpNew::accept(Visitor *v)
+{
+  v->visitIdentExpNew(this);
+}
+
+IdentExpNew *IdentExpNew::clone() const
+{
+  return new IdentExpNew(*this);
+}
+
+
+
+/********************   IdentExpNull    ********************/
+IdentExpNull::IdentExpNull(Type *p1)
+{
+  type_ = p1;
+
+}
+
+IdentExpNull::IdentExpNull(const IdentExpNull & other)
+{
+  type_ = other.type_->clone();
+
+}
+
+IdentExpNull &IdentExpNull::operator=(const IdentExpNull & other)
+{
+  IdentExpNull tmp(other);
+  swap(tmp);
+  return *this;
+}
+
+void IdentExpNull::swap(IdentExpNull & other)
+{
+  std::swap(type_, other.type_);
+
+}
+
+IdentExpNull::~IdentExpNull()
+{
+  delete(type_);
+
+}
+
+void IdentExpNull::accept(Visitor *v)
+{
+  v->visitIdentExpNull(this);
+}
+
+IdentExpNull *IdentExpNull::clone() const
+{
+  return new IdentExpNull(*this);
+}
+
+
+
+/********************   IdentExpBracket    ********************/
+IdentExpBracket::IdentExpBracket(IdentExpan *p1)
+{
+  identexpan_ = p1;
+
+}
+
+IdentExpBracket::IdentExpBracket(const IdentExpBracket & other)
+{
+  identexpan_ = other.identexpan_->clone();
+
+}
+
+IdentExpBracket &IdentExpBracket::operator=(const IdentExpBracket & other)
+{
+  IdentExpBracket tmp(other);
+  swap(tmp);
+  return *this;
+}
+
+void IdentExpBracket::swap(IdentExpBracket & other)
+{
+  std::swap(identexpan_, other.identexpan_);
+
+}
+
+IdentExpBracket::~IdentExpBracket()
+{
+  delete(identexpan_);
+
+}
+
+void IdentExpBracket::accept(Visitor *v)
+{
+  v->visitIdentExpBracket(this);
+}
+
+IdentExpBracket *IdentExpBracket::clone() const
+{
+  return new IdentExpBracket(*this);
+}
+
+
+
 /********************   ArgDef    ********************/
 ArgDef::ArgDef(Type *p1, Ident p2)
 {
@@ -1554,94 +1686,6 @@ void Fun::accept(Visitor *v)
 Fun *Fun::clone() const
 {
   return new Fun(*this);
-}
-
-
-
-/********************   ENullCast    ********************/
-ENullCast::ENullCast(Type *p1)
-{
-  type_ = p1;
-
-}
-
-ENullCast::ENullCast(const ENullCast & other)
-{
-  type_ = other.type_->clone();
-
-}
-
-ENullCast &ENullCast::operator=(const ENullCast & other)
-{
-  ENullCast tmp(other);
-  swap(tmp);
-  return *this;
-}
-
-void ENullCast::swap(ENullCast & other)
-{
-  std::swap(type_, other.type_);
-
-}
-
-ENullCast::~ENullCast()
-{
-  delete(type_);
-
-}
-
-void ENullCast::accept(Visitor *v)
-{
-  v->visitENullCast(this);
-}
-
-ENullCast *ENullCast::clone() const
-{
-  return new ENullCast(*this);
-}
-
-
-
-/********************   ENewClass    ********************/
-ENewClass::ENewClass(Type *p1)
-{
-  type_ = p1;
-
-}
-
-ENewClass::ENewClass(const ENewClass & other)
-{
-  type_ = other.type_->clone();
-
-}
-
-ENewClass &ENewClass::operator=(const ENewClass & other)
-{
-  ENewClass tmp(other);
-  swap(tmp);
-  return *this;
-}
-
-void ENewClass::swap(ENewClass & other)
-{
-  std::swap(type_, other.type_);
-
-}
-
-ENewClass::~ENewClass()
-{
-  delete(type_);
-
-}
-
-void ENewClass::accept(Visitor *v)
-{
-  v->visitENewClass(this);
-}
-
-ENewClass *ENewClass::clone() const
-{
-  return new ENewClass(*this);
 }
 
 

@@ -725,11 +725,11 @@ RelOp* pRelOp(const char *str)
 %token _SYMB_3    //   {
 %token _SYMB_4    //   }
 %token _SYMB_5    //   .
-%token _SYMB_6    //   ,
-%token _SYMB_7    //   =
-%token _SYMB_8    //   ++
-%token _SYMB_9    //   --
-%token _SYMB_10    //   )null
+%token _SYMB_6    //   )null
+%token _SYMB_7    //   ,
+%token _SYMB_8    //   =
+%token _SYMB_9    //   ++
+%token _SYMB_10    //   --
 %token _SYMB_11    //   -
 %token _SYMB_12    //   !
 %token _SYMB_13    //   &&
@@ -809,6 +809,9 @@ IdentExpan : IdentExpan _SYMB_5 _IDENT_ {  $$ = new IdentExp($1, $3); $$->line_n
   | IdentExpan _SYMB_5 _IDENT_ _SYMB_0 ListExpr _SYMB_1 {  std::reverse($5->begin(),$5->end()) ;$$ = new IdentExpFun($1, $3, $5); $$->line_number = yy_mylinenumber;  }
   | _IDENT_ {  $$ = new IdentExpSimple($1); $$->line_number = yy_mylinenumber;  }
   | _IDENT_ _SYMB_0 ListExpr _SYMB_1 {  std::reverse($3->begin(),$3->end()) ;$$ = new IdentExpSimpleFun($1, $3); $$->line_number = yy_mylinenumber;  }
+  | _SYMB_32 Type {  $$ = new IdentExpNew($2); $$->line_number = yy_mylinenumber;  }
+  | _SYMB_0 Type _SYMB_6 {  $$ = new IdentExpNull($2); $$->line_number = yy_mylinenumber;  }
+  | _SYMB_0 IdentExpan _SYMB_1 {  $$ = new IdentExpBracket($2); $$->line_number = yy_mylinenumber;  }
 ;
 ListTopDef : TopDef {  $$ = new ListTopDef() ; $$->push_back($1);  } 
   | TopDef ListTopDef {  $2->push_back($1) ; $$ = $2 ;  }
@@ -817,7 +820,7 @@ Arg : Type _IDENT_ {  $$ = new ArgDef($1, $2); $$->line_number = yy_mylinenumber
 ;
 ListArg : /* empty */ {  $$ = new ListArg();  } 
   | Arg {  $$ = new ListArg() ; $$->push_back($1);  }
-  | Arg _SYMB_6 ListArg {  $3->push_back($1) ; $$ = $3 ;  }
+  | Arg _SYMB_7 ListArg {  $3->push_back($1) ; $$ = $3 ;  }
 ;
 Block : _SYMB_3 ListStmt _SYMB_4 {  $$ = new BlockDef($2); $$->line_number = yy_mylinenumber;  } 
 ;
@@ -827,9 +830,9 @@ ListStmt : /* empty */ {  $$ = new ListStmt();  }
 Stmt : _SYMB_2 {  $$ = new Empty(); $$->line_number = yy_mylinenumber;  } 
   | Block {  $$ = new BStmt($1); $$->line_number = yy_mylinenumber;  }
   | Type ListItem _SYMB_2 {  std::reverse($2->begin(),$2->end()) ;$$ = new Decl($1, $2); $$->line_number = yy_mylinenumber;  }
-  | IdentExpan _SYMB_7 Expr _SYMB_2 {  $$ = new Ass($1, $3); $$->line_number = yy_mylinenumber;  }
-  | IdentExpan _SYMB_8 _SYMB_2 {  $$ = new Incr($1); $$->line_number = yy_mylinenumber;  }
-  | IdentExpan _SYMB_9 _SYMB_2 {  $$ = new Decr($1); $$->line_number = yy_mylinenumber;  }
+  | IdentExpan _SYMB_8 Expr _SYMB_2 {  $$ = new Ass($1, $3); $$->line_number = yy_mylinenumber;  }
+  | IdentExpan _SYMB_9 _SYMB_2 {  $$ = new Incr($1); $$->line_number = yy_mylinenumber;  }
+  | IdentExpan _SYMB_10 _SYMB_2 {  $$ = new Decr($1); $$->line_number = yy_mylinenumber;  }
   | _SYMB_33 Expr _SYMB_2 {  $$ = new Ret($2); $$->line_number = yy_mylinenumber;  }
   | _SYMB_33 _SYMB_2 {  $$ = new VRet(); $$->line_number = yy_mylinenumber;  }
   | _SYMB_30 _SYMB_0 Expr _SYMB_1 Stmt {  $$ = new Cond($3, $5); $$->line_number = yy_mylinenumber;  }
@@ -838,10 +841,10 @@ Stmt : _SYMB_2 {  $$ = new Empty(); $$->line_number = yy_mylinenumber;  }
   | Expr _SYMB_2 {  $$ = new SExp($1); $$->line_number = yy_mylinenumber;  }
 ;
 Item : _IDENT_ {  $$ = new NoInit($1); $$->line_number = yy_mylinenumber;  } 
-  | _IDENT_ _SYMB_7 Expr {  $$ = new Init($1, $3); $$->line_number = yy_mylinenumber;  }
+  | _IDENT_ _SYMB_8 Expr {  $$ = new Init($1, $3); $$->line_number = yy_mylinenumber;  }
 ;
 ListItem : Item {  $$ = new ListItem() ; $$->push_back($1);  } 
-  | Item _SYMB_6 ListItem {  $3->push_back($1) ; $$ = $3 ;  }
+  | Item _SYMB_7 ListItem {  $3->push_back($1) ; $$ = $3 ;  }
 ;
 Type : _SYMB_31 {  $$ = new Int(); $$->line_number = yy_mylinenumber;  } 
   | _SYMB_34 {  $$ = new Str(); $$->line_number = yy_mylinenumber;  }
@@ -851,11 +854,9 @@ Type : _SYMB_31 {  $$ = new Int(); $$->line_number = yy_mylinenumber;  }
 ;
 ListType : /* empty */ {  $$ = new ListType();  } 
   | Type {  $$ = new ListType() ; $$->push_back($1);  }
-  | Type _SYMB_6 ListType {  $3->push_back($1) ; $$ = $3 ;  }
+  | Type _SYMB_7 ListType {  $3->push_back($1) ; $$ = $3 ;  }
 ;
-Expr6 : _SYMB_0 Type _SYMB_10 {  $$ = new ENullCast($2); $$->line_number = yy_mylinenumber;  } 
-  | _SYMB_32 Type {  $$ = new ENewClass($2); $$->line_number = yy_mylinenumber;  }
-  | IdentExpan {  $$ = new EVar($1); $$->line_number = yy_mylinenumber;  }
+Expr6 : IdentExpan {  $$ = new EVar($1); $$->line_number = yy_mylinenumber;  } 
   | _INTEGER_ {  $$ = new ELitInt($1); $$->line_number = yy_mylinenumber;  }
   | _SYMB_35 {  $$ = new ELitTrue(); $$->line_number = yy_mylinenumber;  }
   | _SYMB_29 {  $$ = new ELitFalse(); $$->line_number = yy_mylinenumber;  }
@@ -883,7 +884,7 @@ Expr : Expr1 _SYMB_14 Expr {  $$ = new EOr($1, $3); $$->line_number = yy_mylinen
 ;
 ListExpr : /* empty */ {  $$ = new ListExpr();  } 
   | Expr {  $$ = new ListExpr() ; $$->push_back($1);  }
-  | Expr _SYMB_6 ListExpr {  $3->push_back($1) ; $$ = $3 ;  }
+  | Expr _SYMB_7 ListExpr {  $3->push_back($1) ; $$ = $3 ;  }
 ;
 AddOp : _SYMB_15 {  $$ = new Plus(); $$->line_number = yy_mylinenumber;  } 
   | _SYMB_11 {  $$ = new Minus(); $$->line_number = yy_mylinenumber;  }

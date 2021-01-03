@@ -1,7 +1,7 @@
 @dnl = internal constant [4 x i8] c"%d\0A\00"
 @fnl = internal constant [6 x i8] c"%.1f\0A\00"
 @d   = internal constant [4 x i8] c"%d\0A\00"
-@str = internal constant [9 x i8] c"%[^\0A]%*c\00"
+@str = internal constant [16 x i8] c"%1048576[^\0A]%*c\00"
 
 @errStr = internal constant [14 x i8] c"runtime error\00"
 
@@ -41,9 +41,9 @@ entry:	%res = alloca i32
 
 define i8* @readString() {
 entry:  
-        %max = call i8* @malloc(i32 256)
+        %max = call i8* @malloc(i32 1048576)
 
-        %t1 = getelementptr [9 x i8], [9 x i8]* @str, i32 0, i32 0
+        %t1 = getelementptr [16 x i8], [16 x i8]* @str, i32 0, i32 0
 
         call i32 (i8*, ...) @scanf(i8* %t1, i8* %max)
         %len = call i32 @strlen(i8* %max)

@@ -33,6 +33,9 @@ public:
   void visitIdentExpFun(IdentExpFun *p);
   void visitIdentExpSimple(IdentExpSimple *p);
   void visitIdentExpSimpleFun(IdentExpSimpleFun *p);
+  void visitIdentExpNew(IdentExpNew *p);
+  void visitIdentExpNull(IdentExpNull *p);
+  void visitIdentExpBracket(IdentExpBracket *p);
   void visitArgDef(ArgDef *p);
   void visitBlockDef(BlockDef *p);
   void visitEmpty(Empty *p);
@@ -55,8 +58,6 @@ public:
   void visitVoid(Void *p);
   void visitClass(Class *p);
   void visitFun(Fun *p);
-  void visitENullCast(ENullCast *p);
-  void visitENewClass(ENewClass *p);
   void visitEVar(EVar *p);
   void visitELitInt(ELitInt *p);
   void visitELitTrue(ELitTrue *p);

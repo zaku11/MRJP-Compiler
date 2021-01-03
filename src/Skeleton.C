@@ -133,6 +133,30 @@ void Skeleton::visitIdentExpSimpleFun(IdentExpSimpleFun *ident_exp_simple_fun)
 
 }
 
+void Skeleton::visitIdentExpNew(IdentExpNew *ident_exp_new)
+{
+  /* Code For IdentExpNew Goes Here */
+
+  ident_exp_new->type_->accept(this);
+
+}
+
+void Skeleton::visitIdentExpNull(IdentExpNull *ident_exp_null)
+{
+  /* Code For IdentExpNull Goes Here */
+
+  ident_exp_null->type_->accept(this);
+
+}
+
+void Skeleton::visitIdentExpBracket(IdentExpBracket *ident_exp_bracket)
+{
+  /* Code For IdentExpBracket Goes Here */
+
+  ident_exp_bracket->identexpan_->accept(this);
+
+}
+
 void Skeleton::visitArgDef(ArgDef *arg_def)
 {
   /* Code For ArgDef Goes Here */
@@ -309,22 +333,6 @@ void Skeleton::visitFun(Fun *fun)
 
   fun->type_->accept(this);
   fun->listtype_->accept(this);
-
-}
-
-void Skeleton::visitENullCast(ENullCast *e_null_cast)
-{
-  /* Code For ENullCast Goes Here */
-
-  e_null_cast->type_->accept(this);
-
-}
-
-void Skeleton::visitENewClass(ENewClass *e_new_class)
-{
-  /* Code For ENewClass Goes Here */
-
-  e_new_class->type_->accept(this);
 
 }
 

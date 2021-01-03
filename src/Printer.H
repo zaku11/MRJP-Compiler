@@ -57,6 +57,9 @@ void render(char *s);
   void visitIdentExpFun(IdentExpFun *p);
   void visitIdentExpSimple(IdentExpSimple *p);
   void visitIdentExpSimpleFun(IdentExpSimpleFun *p);
+  void visitIdentExpNew(IdentExpNew *p);
+  void visitIdentExpNull(IdentExpNull *p);
+  void visitIdentExpBracket(IdentExpBracket *p);
   void visitListTopDef(ListTopDef *p);
   void visitArg(Arg *p); /* abstract class */
   void visitArgDef(ArgDef *p);
@@ -90,8 +93,6 @@ void render(char *s);
   void visitFun(Fun *p);
   void visitListType(ListType *p);
   void visitExpr(Expr *p); /* abstract class */
-  void visitENullCast(ENullCast *p);
-  void visitENewClass(ENewClass *p);
   void visitEVar(EVar *p);
   void visitELitInt(ELitInt *p);
   void visitELitTrue(ELitTrue *p);

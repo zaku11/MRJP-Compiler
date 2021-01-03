@@ -11,6 +11,7 @@
 #include "Absyn.H"
 #include "Printer.H"
 #include "LLVM.H"
+#include <regex>
 #include <iostream>
 #include <fstream>
 

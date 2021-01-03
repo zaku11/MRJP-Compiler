@@ -424,6 +424,15 @@ void LLVM::visitListClassMember(ListClassMember *p) {
 
 void LLVM::visitIdentExpan(IdentExpan *p) {} /* abstract class */
 
+IdentExpan* unpackBrackets(IdentExpan* p) {
+  IdentExpan* exp_inside = p;
+    
+  while(auto internal = dynamic_cast<IdentExpBracket*>(exp_inside)) 
+    exp_inside = internal->identexpan_; 
+
+  return exp_inside;
+}
+
 void LLVM::check_for_nulls() {
   was_null_ptr_label_needed = true;
   addToOutput("%testNull" + to_string(last_var + 1) + " = icmp eq %" + current_exp_type + "*  %i" + to_string(last_var) + ", null\n");
@@ -525,6 +534,33 @@ void LLVM::visitIdentExpSimpleFun(IdentExpSimpleFun *p) {
   }
   addToOutput(")\n");
   current_exp_type = trim_if_class(transform_type_name(*function_data[p->ident_].first));
+}
+
+void LLVM::visitIdentExpNew(IdentExpNew *p) {
+  auto ident = trim_if_class(transform_type_name(*p->type_));
+  auto type = "%" + ident + "*";
+  auto type_no_star = "%" + ident;
+
+  // This nifty little snippet will compute how much memory i need to alloc for my structures
+  addToOutput("%Size" + to_string(last_var + 1) + " = getelementptr " + type_no_star + ", " + type + " null, i32 1\n");
+  addToOutput("%Size_" + to_string(last_var + 1) + " = ptrtoint " + type + " %Size" + to_string(last_var + 1) + " to i32" + "\n");
+
+  auto size = "%Size_" + to_string(last_var + 1);
+
+  addToOutput("%i" + to_string(last_var + 1) + " = call i8* @malloc(i32 " + size + ")\n");
+  addToOutput("%i" + to_string(last_var + 2) + " = bitcast i8* %i" + to_string(last_var + 1) + " to " + type + "\n");
+  addToOutput("call void @" + ident + "__reset" + "(" + type + " %i" + to_string(last_var + 2) + ")\n");
+
+  current_exp_type = ident;
+  last_var += 2;
+}
+
+void LLVM::visitIdentExpNull(IdentExpNull *p) {
+  current_exp_type = trim_if_class(transform_type_name(*p->type_));
+  // TODO
+}
+void LLVM::visitIdentExpBracket(IdentExpBracket *p) {
+  p->identexpan_->accept(this);
 }
 
 
@@ -685,18 +721,22 @@ String LLVM::processSingle(Expr* expr) {
     ans = to_string(stmt->integer_);
     return ans;
   } 
-  if(auto stmt = dynamic_cast<ELitTrue*>(expr)) {
+  if(dynamic_cast<ELitTrue*>(expr)) {
     ans = "1";
     return ans;
   }
-  if(auto stmt = dynamic_cast<ELitFalse*>(expr)) {
+  if(dynamic_cast<ELitFalse*>(expr)) {
     ans = "0";
     return ans;
   } 
-  if(auto stmt = dynamic_cast<ENullCast*>(expr)) {
-    ans = "null";
-    return ans;
-  } 
+  if(auto casted = dynamic_cast<EVar*>(expr)) {
+    IdentExpan* exp_inside = unpackBrackets(casted->identexpan_); 
+
+    if(dynamic_cast<IdentExpNull*>(exp_inside)) {
+      ans = "null";
+      return ans;
+    } 
+  }
   
   expr->accept(this);
   // if(auto stmt = dynamic_cast<EVar*>(expr)) {
@@ -720,10 +760,18 @@ void LLVM::visitAss(Ass *p)
   auto ans = processSingle(p->expr_);
   auto type = cpp_to_llvm_types(p->expr_->expr_type_);
 
-  if(dynamic_cast<IdentExpSimple*>(p->identexpan_)) 
-    addToOutput("store " + type + " " + ans + ", " + type + "* %" + getCurrentVarNum(*p->identexpan_) + "\n");
+  auto identexpan = unpackBrackets(p->identexpan_);
+
+  if(auto ident = dynamic_cast<IdentExpSimple*>(identexpan)) { 
+    if(trim_if_class(type) != ident->my_type_) {
+      go_upward_in_inheritance(trim_if_class(type), ident->my_type_, ans);
+      ans = "%i" + to_string(last_var);
+    }
+    addToOutput("store %" + ident->my_type_ + "* " + ans + ", %" + ident->my_type_ + "** %" + getCurrentVarNum(*p->identexpan_) + "\n");
+  }
   else {
-    p->identexpan_->accept(this);
+    identexpan->accept(this);
+    // p->identexpan_->accept(this);
     deleteLastLine();
     addToOutput("store " + type + " " + ans + ", " + type + "* %i" + to_string(last_var) + "\n");
   }
@@ -904,50 +952,25 @@ void LLVM::visitListType(ListType *listtype)
 
 void LLVM::visitExpr(Expr *p) {} //abstract class
 
-void LLVM::visitENullCast(ENullCast *p) {
-}
-
-void LLVM::visitENewClass(ENewClass *p) {
-  auto ident = dynamic_cast<Class*>(p->type_)->ident_;
-  auto type = "%" + ident + "*";
-  auto type_no_star = "%" + ident;
-
-  // This nifty little snippet will compute how much memory i need to alloc for my structures
-  addToOutput("%Size" + to_string(last_var + 1) + " = getelementptr " + type_no_star + ", " + type + " null, i32 1\n");
-  addToOutput("%Size_" + to_string(last_var + 1) + " = ptrtoint " + type + " %Size" + to_string(last_var + 1) + " to i32" + "\n");
-
-  auto size = "%Size_" + to_string(last_var + 1);
-
-  addToOutput("%i" + to_string(last_var + 1) + " = call i8* @malloc(i32 " + size + ")\n");
-  addToOutput("%i" + to_string(last_var + 2) + " = bitcast i8* %i" + to_string(last_var + 1) + " to " + type + "\n");
-  addToOutput("call void @" + ident + "__reset" + "(" + type + " %i" + to_string(last_var + 2) + ")\n");
-
-  last_var += 2;
-}
-
 void LLVM::visitEVar(EVar *p)
 {
   auto type = cpp_to_llvm_types(p->expr_type_);
-  if(dynamic_cast<IdentExpSimple*>(p->identexpan_)) {
-    addToOutput("%i" + to_string(last_var + 1) + " = load " + type + ", " + type + "* %" + getCurrentVarNum(*p->identexpan_) + "\n");
+  auto identexpan = unpackBrackets(p->identexpan_);
+
+  if(dynamic_cast<IdentExpSimple*>(identexpan)) {
+    addToOutput("%i" + to_string(last_var + 1) + " = load " + type + ", " + type + "* %" + getCurrentVarNum(*identexpan) + "\n");
     last_var++;
     return;
   } 
-  if(dynamic_cast<IdentExpSimpleFun*>(p->identexpan_)) {
-    p->identexpan_->accept(this);
-    return;
-  }
-  if(dynamic_cast<IdentExp*>(p->identexpan_)) {
-    p->identexpan_->accept(this);
+  if(dynamic_cast<IdentExp*>(identexpan)) {
+    identexpan->accept(this);
     deleteLastLine();
 
     addToOutput("%i" + to_string(last_var + 1) + " = load " + type + ", " + type + "* %i" + to_string(last_var) + "\n");
     last_var++; 
     return;
   }
-  if(dynamic_cast<IdentExpFun*>(p->identexpan_)) {
-    p->identexpan_->accept(this);
-  }  
+  identexpan->accept(this);
 }
 
 void LLVM::visitELitInt(ELitInt *p)

@@ -365,6 +365,50 @@ void PrintAbsyn::visitIdentExpSimpleFun(IdentExpSimpleFun *p)
   try_to_end(p);
 }
 
+void PrintAbsyn::visitIdentExpNew(IdentExpNew *p)
+{
+  int oldi = _i_;
+  if (oldi > 0) render(_L_PAREN);
+
+  render((char*)"new");
+  visitType(p->type_);
+
+  if (oldi > 0) render(_R_PAREN);
+
+  _i_ = oldi;
+  try_to_end(p);
+}
+
+void PrintAbsyn::visitIdentExpNull(IdentExpNull *p)
+{
+  int oldi = _i_;
+  if (oldi > 0) render(_L_PAREN);
+
+  render('(');
+  _i_ = 0; p->type_->accept(this);
+  render((char*)")null");
+
+  if (oldi > 0) render(_R_PAREN);
+
+  _i_ = oldi;
+  try_to_end(p);
+}
+
+void PrintAbsyn::visitIdentExpBracket(IdentExpBracket *p)
+{
+  int oldi = _i_;
+  if (oldi > 0) render(_L_PAREN);
+
+  render('(');
+  _i_ = 0; p->identexpan_->accept(this);
+  render(')');
+
+  if (oldi > 0) render(_R_PAREN);
+
+  _i_ = oldi;
+  try_to_end(p);
+}
+
 void PrintAbsyn::visitListTopDef(ListTopDef *listtopdef)
 {
   for (ListTopDef::const_iterator i = listtopdef->begin() ; i != listtopdef->end() ; ++i)
@@ -744,35 +788,6 @@ void PrintAbsyn::visitListType(ListType *listtype)
 }
 
 void PrintAbsyn::visitExpr(Expr *p) {} //abstract class
-
-void PrintAbsyn::visitENullCast(ENullCast *p)
-{
-  int oldi = _i_;
-  if (oldi > 6) render(_L_PAREN);
-
-  render('(');
-  _i_ = 0; p->type_->accept(this);
-  render((char*)")null");
-
-  if (oldi > 6) render(_R_PAREN);
-
-  _i_ = oldi;
-  try_to_end(p);
-}
-
-void PrintAbsyn::visitENewClass(ENewClass *p)
-{
-  int oldi = _i_;
-  if (oldi > 6) render(_L_PAREN);
-
-  render((char*)"new");
-  _i_ = 0; p->type_->accept(this);
-
-  if (oldi > 6) render(_R_PAREN);
-
-  _i_ = oldi;
-  try_to_end(p);
-}
 
 void PrintAbsyn::visitEVar(EVar *p)
 {

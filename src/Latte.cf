@@ -13,6 +13,9 @@ IdentExp.          IdentExpan ::= IdentExpan "." Ident ;
 IdentExpFun.       IdentExpan ::= IdentExpan "." Ident "(" [Expr] ")" ;
 IdentExpSimple.    IdentExpan ::= Ident;
 IdentExpSimpleFun. IdentExpan ::= Ident "(" [Expr] ")";
+IdentExpNew.       IdentExpan ::= "new" Type ;
+IdentExpNull.      IdentExpan ::= "(" Type ")null" ;
+IdentExpBracket.   IdentExpan ::= "(" IdentExpan ")" ;
 separator nonempty TopDef "" ;
 ArgDef.     Arg ::= Type Ident;
 separator   Arg "," ;
@@ -43,8 +46,6 @@ Class.     Type ::= Ident ;
 internal   Fun. Type ::= Type "(" [Type] ")" ;
 separator  Type "," ;
 -- Expressions ---------------------------------------------
-ENullCast. Expr6 ::= "(" Type ")null" ;
-ENewClass. Expr6 ::= "new" Type ;   
 EVar.      Expr6 ::= IdentExpan ;
 ELitInt.   Expr6 ::= Integer ;
 ELitTrue.  Expr6 ::= "true" ;

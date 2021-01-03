@@ -44,6 +44,9 @@ class IdentExp;
 class IdentExpFun;
 class IdentExpSimple;
 class IdentExpSimpleFun;
+class IdentExpNew;
+class IdentExpNull;
+class IdentExpBracket;
 class ArgDef;
 class BlockDef;
 class Empty;
@@ -66,8 +69,6 @@ class Bool;
 class Void;
 class Class;
 class Fun;
-class ENullCast;
-class ENewClass;
 class EVar;
 class ELitInt;
 class ELitTrue;
@@ -130,6 +131,9 @@ public:
   virtual void visitIdentExpFun(IdentExpFun *p) = 0;
   virtual void visitIdentExpSimple(IdentExpSimple *p) = 0;
   virtual void visitIdentExpSimpleFun(IdentExpSimpleFun *p) = 0;
+  virtual void visitIdentExpNew(IdentExpNew *p) = 0;
+  virtual void visitIdentExpNull(IdentExpNull *p) = 0;
+  virtual void visitIdentExpBracket(IdentExpBracket *p) = 0;
   virtual void visitArgDef(ArgDef *p) = 0;
   virtual void visitBlockDef(BlockDef *p) = 0;
   virtual void visitEmpty(Empty *p) = 0;
@@ -152,8 +156,6 @@ public:
   virtual void visitVoid(Void *p) = 0;
   virtual void visitClass(Class *p) = 0;
   virtual void visitFun(Fun *p) = 0;
-  virtual void visitENullCast(ENullCast *p) = 0;
-  virtual void visitENewClass(ENewClass *p) = 0;
   virtual void visitEVar(EVar *p) = 0;
   virtual void visitELitInt(ELitInt *p) = 0;
   virtual void visitELitTrue(ELitTrue *p) = 0;
@@ -264,7 +266,6 @@ class Expr : public Visitable
 {
 public:
   String expr_type_;
-
   virtual Expr *clone() const = 0;
 };
 
@@ -470,6 +471,48 @@ public:
   virtual void accept(Visitor *v);
   virtual IdentExpSimpleFun *clone() const;
   void swap(IdentExpSimpleFun &);
+};
+
+class IdentExpNew : public IdentExpan
+{
+public:
+  Type *type_;
+
+  IdentExpNew(const IdentExpNew &);
+  IdentExpNew &operator=(const IdentExpNew &);
+  IdentExpNew(Type *p1);
+  ~IdentExpNew();
+  virtual void accept(Visitor *v);
+  virtual IdentExpNew *clone() const;
+  void swap(IdentExpNew &);
+};
+
+class IdentExpNull : public IdentExpan
+{
+public:
+  Type *type_;
+
+  IdentExpNull(const IdentExpNull &);
+  IdentExpNull &operator=(const IdentExpNull &);
+  IdentExpNull(Type *p1);
+  ~IdentExpNull();
+  virtual void accept(Visitor *v);
+  virtual IdentExpNull *clone() const;
+  void swap(IdentExpNull &);
+};
+
+class IdentExpBracket : public IdentExpan
+{
+public:
+  IdentExpan *identexpan_;
+
+  IdentExpBracket(const IdentExpBracket &);
+  IdentExpBracket &operator=(const IdentExpBracket &);
+  IdentExpBracket(IdentExpan *p1);
+  ~IdentExpBracket();
+  virtual void accept(Visitor *v);
+  virtual IdentExpBracket *clone() const;
+  void swap(IdentExpBracket &);
 };
 
 class ArgDef : public Arg
@@ -781,34 +824,6 @@ public:
   virtual void accept(Visitor *v);
   virtual Fun *clone() const;
   void swap(Fun &);
-};
-
-class ENullCast : public Expr
-{
-public:
-  Type *type_;
-
-  ENullCast(const ENullCast &);
-  ENullCast &operator=(const ENullCast &);
-  ENullCast(Type *p1);
-  ~ENullCast();
-  virtual void accept(Visitor *v);
-  virtual ENullCast *clone() const;
-  void swap(ENullCast &);
-};
-
-class ENewClass : public Expr
-{
-public:
-  Type *type_;
-
-  ENewClass(const ENewClass &);
-  ENewClass &operator=(const ENewClass &);
-  ENewClass(Type *p1);
-  ~ENewClass();
-  virtual void accept(Visitor *v);
-  virtual ENewClass *clone() const;
-  void swap(ENewClass &);
 };
 
 class EVar : public Expr

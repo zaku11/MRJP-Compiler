@@ -344,6 +344,25 @@ void StaticAnalyzer::visitIdentExpSimpleFun(IdentExpSimpleFun *p) {
   last_evaluated_expr_value = DECOY;
 }
 
+void StaticAnalyzer::visitIdentExpNew(IdentExpNew *p) {
+  last_evaluated_expr = get_type(p->type_);
+  last_evaluated_expr_value = DECOY;
+}
+
+void StaticAnalyzer::visitIdentExpNull(IdentExpNull *p) {
+  auto null_type = get_type(p->type_);
+  if(is_a_basic_type(null_type))
+    fail("you can't cast null to a basic type\n", p);
+  if(!is_a_valid_type(p->type_, env_of_structures)) 
+    fail("struct " + null_type + " was not recognized\n", p);
+
+  last_evaluated_expr = null_type;
+  last_evaluated_expr_value = DECOY;
+}
+
+void StaticAnalyzer::visitIdentExpBracket(IdentExpBracket *p) {
+  p->identexpan_->accept(this);
+}
 
 pair <map<Ident, TYPE>, FunEnv> extract_data(ClassDefInherit* class_def) {
   map <Ident, TYPE> members;
@@ -729,26 +748,6 @@ void StaticAnalyzer::visitListType(ListType *listtype)
 }
 
 void StaticAnalyzer::visitExpr(Expr *p) {} //abstract class
-
-void StaticAnalyzer::visitENullCast(ENullCast *p) {
-  auto null_type = get_type(p->type_);
-  if(is_a_basic_type(null_type))
-    fail("you can't cast null to a basic type\n", p);
-  if(!is_a_valid_type(p->type_, env_of_structures)) 
-    fail("struct " + null_type + " was not recognized\n", p);
-
-  last_evaluated_expr = null_type;
-  last_evaluated_expr_value = DECOY;
-
-  p->expr_type_ = last_evaluated_expr;
-}
-
-void StaticAnalyzer::visitENewClass(ENewClass *p) {
-  last_evaluated_expr = get_type(p->type_);
-  last_evaluated_expr_value = DECOY;
-
-  p->expr_type_ = last_evaluated_expr;
-}
 
 void StaticAnalyzer::visitEVar(EVar *p)
 {
