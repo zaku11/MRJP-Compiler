@@ -27,18 +27,17 @@ protected:
   bool skipping_instructions = false;
   map<Ident, int> current_var_number;
   map<Ident, int> last_var_numbers;
-  map<Ident, pair<Type*, vector<Type*> > > function_data;
+  map<Ident, pair<string, vector<string> > > function_data;
 
   bool mangle_fn_names = true;
   string current_expected_return = "";
-  string null_ptr_label = "";
-  bool was_null_ptr_label_needed = false;
   // This maps a struct name into a map (member_name -> (member_type, his number))
   map<Ident, map <string, pair<string, int> > > struct_data;
 
   ClassEnv env_of_classes;
 
   string current_exp_type;
+  string in_which_class = "";
 
 public:
   string output;
@@ -53,7 +52,6 @@ public:
 
   void addToInject(string text);
   
-  void check_for_nulls();
   void go_upward_in_inheritance(string current_class, string expected_class, string last_ans);
   void prefetchClasses(ClassDefInherit *p);
   void prefetchClasses(ClassDefNoInherit *p);

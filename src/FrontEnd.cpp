@@ -74,6 +74,18 @@ void check_for_type_matching(TYPE type1, TYPE type2, Visitable *v) {
     fail("got type " + type2 + " but expected " + type1 + "\n", v);
 }
 
+bool is_in_class_cycle(Ident el, ClassEnv& class_env) {
+  Ident ancestor = el;
+  set <Ident> visited;
+  while(ancestor != "") {
+    if(visited.find(ancestor) != visited.end())
+      return true;
+
+    visited.insert(ancestor);
+    ancestor = class_env[ancestor].second;
+  }
+  return false;
+}
 
 bool is_an_ancestor_type(Ident son, Ident father, ClassEnv& class_env) {
   while(son != "") {
@@ -156,6 +168,8 @@ void StaticAnalyzer::visitFnDef(FnDef *p)
         fail("function can't have void as an argument\n", arg);
       if(std::find(arg_names.begin(), arg_names.end(), arg->ident_) != arg_names.end()) 
         fail("variable " + arg->ident_ + " is duplicated in signature", arg);
+      if(!is_a_valid_type(arg->type_, env_of_structures))
+        fail("type " + get_type(arg->type_) + " was not recognized as valid.\n", p);
 
       arg_types.push_back(get_type(arg->type_));
       arg_names.push_back(arg->ident_);
@@ -199,9 +213,26 @@ void StaticAnalyzer::visitClassDefInherit(ClassDefInherit *p) {
     fail("class " + p->ident_2 + " was not recognized.\n", p);
   if(p->ident_2 == p->ident_1) 
     fail("class can't inherit from itself\n", p);
+  if(is_in_class_cycle(p->ident_1, env_of_classes))
+    fail("class " + p->ident_1 + " is in a cyclic hierarchy\n", p);
 
   set <Ident> present_args;
   set <Ident> present_fns;
+  auto env_of_functions_rollback = env_of_functions;
+
+  // I need to prefetch function signatures
+  string current_class = p->ident_1;
+  while(current_class != "") {
+    for(auto fun_member : env_of_classes[current_class].first) {
+      auto ident = fun_member.first;
+      FunctionType fn_type = fun_member.second;
+
+      env_of_functions[ident] = make_pair(fn_type.first, fn_type.second);
+    }
+    current_class = env_of_classes[current_class].second;
+  }
+
+
 
   for(int i = 0; i < p->listclassmember_->size(); i++) {
     auto member = ((*(p->listclassmember_))[i]);
@@ -225,25 +256,23 @@ void StaticAnalyzer::visitClassDefInherit(ClassDefInherit *p) {
         fail(get_type(fun_member->type_) + " does not name a valid type\n", fun_member);
       if(present_fns.find(fun_member->ident_) != present_fns.end()) 
         fail("member" + fun_member->ident_ + " was already present\n", fun_member);
-
-      vector <TYPE> arg_types;
-      for(int j = 0 ; j < fun_member->listarg_->size(); j++)
-        if(auto arg = dynamic_cast<ArgDef*>((*(fun_member->listarg_))[j]))
-          arg_types.push_back(get_type(arg->type_));
-
-
+      if(is_there_a_function(p->ident_2, fun_member->ident_, env_of_classes).has_value())
+        fail("overshadowed function " + fun_member->ident_ + "\n", fun_member);
 
       auto tmp_env_of_vars = env_of_vars;
 
       string current_class = p->ident_1;
       while(current_class != "") {
-        for(auto mem : env_of_structures[current_class]) {
-          if(env_of_vars.find(mem.first) == env_of_vars.end())
-            env_of_vars[mem.first] = mem.second;
-        }
+        for(auto mem : env_of_structures[current_class])
+          env_of_vars[mem.first] = mem.second;
         current_class = env_of_classes[current_class].second;
       }
       env_of_vars["self"] = p->ident_1;
+      for(auto arg : *fun_member->listarg_) 
+        if(auto arg_def = dynamic_cast<ArgDef*>(arg))
+          if(env_of_vars.find(arg_def->ident_) != env_of_vars.end())
+            fail("function argument cannot overshadow a class member and self\n", arg_def);
+
 
       FnDef* tmp_fun = new FnDef{fun_member->type_->clone(), fun_member->ident_, fun_member->listarg_->clone(), fun_member->block_->clone()};
       tmp_fun->line_number = fun_member->line_number;
@@ -253,7 +282,7 @@ void StaticAnalyzer::visitClassDefInherit(ClassDefInherit *p) {
       present_fns.insert(fun_member->ident_);
     }
   }
-
+  env_of_functions = env_of_functions_rollback;
 }
 
 void StaticAnalyzer::visitEmptyClassDef(EmptyClassDef *p) {
@@ -338,13 +367,18 @@ void StaticAnalyzer::visitIdentExpSimpleFun(IdentExpSimpleFun *p) {
 
   for(int i = 0; i < p->listexpr_->size(); i++) {
     (*(p->listexpr_))[i]->accept(this);
-    check_for_type_matching(expected_arg_types[i], last_evaluated_expr, p);
+    check_for_type_matching(expected_arg_types[i], last_evaluated_expr, env_of_classes, p);
   }
   last_evaluated_expr = env_of_functions[p->ident_].second;
   last_evaluated_expr_value = DECOY;
 }
 
 void StaticAnalyzer::visitIdentExpNew(IdentExpNew *p) {
+  if(!is_a_valid_type(p->type_, env_of_structures)) 
+    fail("class " + get_type(p->type_) + " was not recognized\n", p);
+  if(is_a_basic_type(p->type_))
+    fail("you can't instantiate a basic type using new\n", p);
+
   last_evaluated_expr = get_type(p->type_);
   last_evaluated_expr_value = DECOY;
 }
@@ -354,7 +388,7 @@ void StaticAnalyzer::visitIdentExpNull(IdentExpNull *p) {
   if(is_a_basic_type(null_type))
     fail("you can't cast null to a basic type\n", p);
   if(!is_a_valid_type(p->type_, env_of_structures)) 
-    fail("struct " + null_type + " was not recognized\n", p);
+    fail("class " + null_type + " was not recognized\n", p);
 
   last_evaluated_expr = null_type;
   last_evaluated_expr_value = DECOY;
@@ -451,9 +485,6 @@ void StaticAnalyzer::visitListTopDef(ListTopDef *listtopdef)
       env_of_structures[class_def->ident_1] = no_members;
       env_of_classes[class_def->ident_1] = make_pair(no_class_functions, class_def->ident_2);
     }
-    
-    
-    
   }
   
   if(!was_there_main) {
@@ -546,27 +577,9 @@ void StaticAnalyzer::visitDecl(Decl *p)
         init->expr_->accept(this);
 
         defined_in_current_scope.insert(init->ident_);
-        if(is_a_basic_type(p->type_)) {
-          check_for_type_matching(get_type(p->type_), last_evaluated_expr, init);
-          env_of_vars[init->ident_] = get_type(p->type_);
-        }
-        else {
-          if(!is_an_ancestor_type(last_evaluated_expr, get_type(p->type_), env_of_classes))
-            fail(init->ident_ + " was declared as a " + get_type(p->type_) + " but was assigned a new " + last_evaluated_expr + "\n", init);
-        
-            env_of_vars[init->ident_] = last_evaluated_expr;
-        }
+        check_for_type_matching(get_type(p->type_), last_evaluated_expr, env_of_classes, init);
+        env_of_vars[init->ident_] = get_type(p->type_);
       }
-      // if(auto init = dynamic_cast<InitClass*>(*i)) {
-      //   same_scope_redefinition(init->ident_1, &defined_in_current_scope, init);
-        
-      //   // if(get_type(p->type_) != init->ident_2) 
-      //   if(!is_an_ancestor_type(init->ident_2, get_type(p->type_), env_of_classes))
-      //     fail(init->ident_1 + " was declared as a " + get_type(p->type_) + " but was assigned a new " + init->ident_2 + "\n", init);
-        
-      //   defined_in_current_scope.insert(init->ident_1);
-      //   env_of_vars[init->ident_1] = init->ident_2;
-      // }
     }
   }
 }
@@ -574,25 +587,26 @@ void StaticAnalyzer::visitDecl(Decl *p)
 
 void StaticAnalyzer::visitAss(Ass *p)
 {
+  if(!dynamic_cast<IdentExpSimple*>(p->identexpan_) && !dynamic_cast<IdentExp*>(p->identexpan_)) 
+    fail("Left side is not assignable\n", p);
   p->identexpan_->accept(this);
   auto var_type = last_evaluated_expr;
   p->expr_->accept(this);
-  if(is_a_basic_type(var_type))
-    check_for_type_matching(var_type, last_evaluated_expr, env_of_classes ,p);
-  else 
-    if(!is_an_ancestor_type(last_evaluated_expr, var_type, env_of_classes))
-      fail(identExpToString(*p->identexpan_) + " was declared as a " + var_type + " but was assigned a new " + last_evaluated_expr + "\n", p);
-
+  check_for_type_matching(var_type, last_evaluated_expr, env_of_classes ,p);
 }
 
 void StaticAnalyzer::visitIncr(Incr *p)
 {
+  if(!dynamic_cast<IdentExpSimple*>(p->identexpan_) && !dynamic_cast<IdentExp*>(p->identexpan_)) 
+    fail("Left side is not assignable\n", p);
   p->identexpan_->accept(this);
   check_for_type_matching(TYPE_INT, last_evaluated_expr, p);
 }
 
 void StaticAnalyzer::visitDecr(Decr *p)
 {
+  if(!dynamic_cast<IdentExpSimple*>(p->identexpan_) && !dynamic_cast<IdentExp*>(p->identexpan_)) 
+    fail("Left side is not assignable\n", p);
   p->identexpan_->accept(this);
   check_for_type_matching(TYPE_INT, last_evaluated_expr, p);
 }
@@ -601,9 +615,7 @@ void StaticAnalyzer::visitRet(Ret *p)
 {
   p->expr_->accept(this);
   
-  if(!is_an_ancestor_type(last_evaluated_expr, expected_return_type, env_of_classes))
-    fail("Got type " + last_evaluated_expr + " but expected type " + expected_return_type + "\n", p);
-  // check_for_type_matching(expected_return_type, last_evaluated_expr, p);
+  check_for_type_matching(expected_return_type, last_evaluated_expr, env_of_classes, p);
 
   last_return = last_evaluated_expr;
 
@@ -627,7 +639,8 @@ void StaticAnalyzer::visitCond(Cond *p)
 
   auto cond_value = last_evaluated_expr_value;
   auto ret_tmp = last_return;
-  p->stmt_->accept(this);
+
+  run_with_rollback(p->stmt_);
 
   if(auto val = get_if<bool>(&cond_value)) {
     if((*val) == true) {
@@ -654,10 +667,12 @@ void StaticAnalyzer::visitCondElse(CondElse *p)
   auto ret_before_all_operations = last_return;
 
   last_return = TYPE_VOID;
-  p->stmt_1->accept(this);
+  run_with_rollback(p->stmt_1);
+
   TYPE ret1 = last_return;
   last_return = TYPE_VOID;
-  p->stmt_2->accept(this);
+  run_with_rollback(p->stmt_2);
+
   TYPE ret2 = last_return;
 
   if(ret1 != ret2) {
@@ -681,7 +696,8 @@ void StaticAnalyzer::visitWhile(While *p)
 
   auto cond_value = last_evaluated_expr_value;
   auto ret_tmp = last_return;
-  p->stmt_->accept(this);
+  run_with_rollback(p->stmt_);
+
 
   if(auto val = get_if<bool>(&cond_value)) {
     if((*val) == true) {

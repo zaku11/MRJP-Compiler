@@ -63,14 +63,6 @@ define void @error() {
         ret void
 }
 
-@null_ptr_msg = internal constant [42 x i8] c"Runtime error : tried to access a nullptr\00"
-define void @fail_null_ptr() {
-        %str = getelementptr [42 x i8], [42 x i8]* @null_ptr_msg, i32 0, i32 0
-        call void @printString(i8* %str)
-        call void @exit(i32 0)
-        ret void
-}
-
 define i8* @concat(i8* %s1, i8* %s2)   {
 entry:  
         %i1 = call i32 @strlen(i8* %s1)

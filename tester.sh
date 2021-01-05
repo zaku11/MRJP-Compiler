@@ -8,6 +8,7 @@ for f in ./lattests/good/*.output
 do
     filename=${f::-7}.lat
     echo -e "\e[0mTEST $filename"
+    rm -f ${f::-7}.ll ${f::-7}.bc
     ./latc_llvm $filename 2>1 > /dev/null
     if [ $? -eq 0 ] 
     then
