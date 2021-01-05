@@ -8,16 +8,16 @@ OBJS=Absyn.o Lexer.o Parser.o FrontEnd.o Printer.o LLVM.o
 
 .PHONY: clean distclean
 
-all: TestLatte
+all: CompilerLatte
 
 clean:
-	rm -f *.o TestLatte Latte.aux Latte.log Latte.pdf Latte.dvi Latte.ps Latte
+	rm -f *.o CompilerLatte Latte.aux Latte.log Latte.pdf Latte.dvi Latte.ps Latte
 
 distclean: clean
-	rm -f Absyn.C Absyn.H Test.C Parser.C Parser.H Lexer.C Skeleton.C Skeleton.H FrontEnd.cpp FrontEnd.H Makefile Latte.l Latte.y Latte.tex 
+	rm -f Absyn.C Absyn.H Compiler.C Parser.C Parser.H Lexer.C Skeleton.C Skeleton.H FrontEnd.cpp FrontEnd.H Makefile Latte.l Latte.y Latte.tex 
 
-TestLatte: ${OBJS} Test.o
-	${CC} ${OBJS} Test.o -o latc_llvm
+CompilerLatte: ${OBJS} Compiler.o
+	${CC} ${OBJS} Compiler.o -o latc_llvm
 
 Absyn.o: Absyn.C Absyn.H
 	${CC} -c Absyn.C
@@ -46,5 +46,5 @@ Printer.o: Printer.C Printer.H Absyn.H
 Skeleton.o: Skeleton.C Skeleton.H Absyn.H
 	${CC} -Wno-unused-parameter -c Skeleton.C
 
-Test.o: Test.C Parser.H FrontEnd.H Absyn.H Printer.H LLVM.H
-	${CC} -c Test.C
+Compiler.o: Compiler.C Parser.H FrontEnd.H Absyn.H Printer.H LLVM.H
+	${CC} -c Compiler.C
