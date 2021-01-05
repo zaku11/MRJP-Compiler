@@ -67,7 +67,6 @@ int main(int argc, char ** argv)
       output << llvm->run(parse_tree);
       output.close();
       system(("llvm-as -o " + new_bc_name + " " + new_ll_name).c_str());
-      system("llvm-as -o ./lib/runtime.bc ./lib/runtime.ll");
       system(("llvm-link -o " + new_bc_name + " ./lib/runtime.bc " + new_bc_name).c_str());
 
       exit(0);
