@@ -1,13 +1,13 @@
 @dnl = internal constant [4 x i8] c"%d\0A\00"
-@fnl = internal constant [6 x i8] c"%.1f\0A\00"
 @d   = internal constant [4 x i8] c"%d\0A\00"
-@str = internal constant [16 x i8] c"%1048576[^\0A]%*c\00"
+@emptyStr = internal constant [1 x i8] c"\00";
 
 @errStr = internal constant [14 x i8] c"runtime error\00"
 
 declare i32 @printf(i8*, ...) 
 declare i32 @scanf(i8*, ...)
 declare i32 @puts(i8*)
+declare i64 @getline(i8**, i64*, %struct._IO_FILE*)
 
 declare i8* @malloc(i32)
 declare i32 @strlen(i8*)
@@ -39,21 +39,39 @@ entry:	%res = alloca i32
         ret i32 %t2
 }
 
+; This is ripped from http://ellcc.org/demo/index.cgi output of using getline
+%struct._IO_FILE = type opaque
+@stdin = external global %struct._IO_FILE*
+
 define i8* @readString() {
 entry:  
-        %max = call i8* @malloc(i32 1048576)
+        %size = alloca i64
+        store i64 0, i64* %size
+        %ans = alloca i8*
+        store i8* null, i8** %ans
+        %in = load %struct._IO_FILE*, %struct._IO_FILE** @stdin
 
-        %t1 = getelementptr [16 x i8], [16 x i8]* @str, i32 0, i32 0
+        %read = call i64 @getline(i8** %ans, i64* %size, %struct._IO_FILE* %in)
+        %was_a_success = icmp ne i64 %read, -1
+        br i1 %was_a_success, label %ValidRead, label %InvalidRead
 
-        call i32 (i8*, ...) @scanf(i8* %t1, i8* %max)
-        %len = call i32 @strlen(i8* %max)
-        %lenPlus = add i32 %len, 1
-
-        %mall = call i8* @malloc(i32 %lenPlus)
-        %ret = call i8* @strcpy(i8* %mall, i8* %max)
-
-        call void @free(i8* %max)
-        ret i8* %mall       
+ValidRead: 
+        %ret = load i8*, i8** %ans
+        %len = call i32 @strlen(i8* %ret)
+        %len_sub = sub i32 %len, 1
+        %last_char = getelementptr inbounds i8, i8* %ret, i32 %len_sub
+        %loaded = load i8, i8* %last_char
+        %loaded_i32 = sext i8 %loaded to i32
+        %is_that_newline = icmp eq i32 %loaded_i32, 10
+        br i1 %is_that_newline, label %Newline, label %NotNewline
+        Newline:
+                store i8 0, i8* %last_char
+                ret i8* %ret
+        NotNewline:
+                ret i8* %ret
+InvalidRead:
+        %emptyStr = bitcast [1 x i8]* @emptyStr to i8*
+        ret i8* %emptyStr
 }
 
 define void @error() {

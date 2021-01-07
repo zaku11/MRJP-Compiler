@@ -157,6 +157,10 @@ void LLVM::go_upward_in_inheritance(string actual_class, string expected_class, 
   last_var++;
 }
 
+string mangle_arg_names(string ident) {
+  if(ident == "self") return "self";
+  return "$" + ident;
+}
 
 LLVM::LLVM(ClassEnv clEnv)
 {
@@ -221,7 +225,7 @@ void LLVM::visitFnDef(FnDef *p)
     if(auto arg = dynamic_cast<ArgDef*>(*i)) {
       auto type_in_string = transform_type_name(*arg->type_);
       addToOutput("%" + getCurrentVarNum(arg->ident_) + " = alloca " + type_in_string + "\n");
-      addToOutput("store " + type_in_string + " %" + arg->ident_ + ", " + type_in_string + "* %" + getCurrentVarNum(arg->ident_) + "\n");
+      addToOutput("store " + type_in_string + " %" + mangle_arg_names( arg->ident_) + ", " + type_in_string + "* %" + getCurrentVarNum(arg->ident_) + "\n");
     }
   }
 
@@ -641,7 +645,7 @@ void LLVM::visitArg(Arg *p) {} //abstract class
 
 void LLVM::visitArgDef(ArgDef *p)
 {
-  addToOutput(transform_type_name(*p->type_) + " %" + p->ident_);
+  addToOutput(transform_type_name(*p->type_) + " %" + mangle_arg_names( p->ident_));
 }
 
 void LLVM::visitListArg(ListArg *listarg)
